@@ -4,9 +4,10 @@ import shutil
 import google.generativeai as genai
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from dotenv import load_dotenv
-from scraper import scrape_from_file
+from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_docx, extract_text_from_pptx
 from vector_store import create_vector_db, get_retriever
 from database import init_db, add_scraped_data, get_all_scraped_data, update_data, delete_data, add_to_memory, search_memory
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -17,6 +18,50 @@ init_db()
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/')
 model = genai.GenerativeModel(model_name="gemini-2.5-pro")
+
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'pptx'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/add_manual_data', methods=['POST'])
+def add_manual_data_handler():
+    try:
+        title = request.form.get('title', 'Tanpa Judul')
+        content = request.form.get('content', '')
+        file = request.files.get('file')
+
+        if not content and not file:
+            return jsonify({"status": "error", "message": "Konten atau file harus disediakan."}), 400
+
+        # Jika ada file, proses file tersebut
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            # Jika judul tidak diisi, gunakan nama file sebagai judul
+            if not title or title == 'Tanpa Judul':
+                title = filename
+            
+            file_content = ""
+            if filename.lower().endswith('.pdf'):
+                file_content = extract_text_from_pdf(file.stream)
+            elif filename.lower().endswith('.docx'):
+                file_content = extract_text_from_docx(file.stream)
+            elif filename.lower().endswith('.pptx'):
+                file_content = extract_text_from_pptx(file.stream)
+            
+            if file_content is None:
+                 return jsonify({"status": "error", "message": "Gagal mengekstrak teks dari file."}), 500
+
+            # Gabungkan konten dari form dengan konten dari file
+            content = f"{content}\n\n--- Isi dari {filename} ---\n{file_content}".strip()
+        
+        # Tambahkan ke database
+        add_scraped_data(url=f"manual-input-{title}", title=title, content=content, image_url=None)
+        
+        return jsonify({"status": "success", "message": "Data berhasil ditambahkan secara manual."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/save_memory', methods=['POST'])
@@ -121,30 +166,33 @@ def generate_response(user_query, history):
     yield {"step": "final_prompt", "data": "Agen Persona Staf sedang menyusun jawaban akhir dengan kesadaran konteks..."}
     try:
         final_prompt_text = f"""
-        **Persona Anda:** Anda adalah staf administrasi digital SMKN 2 Indramayu. Sapa pengguna dengan hangat. Gaya bicara Anda ramah, profesional, jelas, dan sangat membantu. Anda TIDAK PERNAH berspekulasi atau memberikan opini.
+        Persona Anda: Anda adalah asisten digital SMKN 2 Indramayu. Panggil pengguna dengan sapaan seperti "Kak" jika sesuai.
+        
+        Gaya Bicara Anda: Gunakan bahasa semi-formal yang ramah, sopan, dan mudah dipahami. Hindari bahasa yang terlalu kaku atau teknis, namun tetap profesional. Anda selalu bersemangat untuk membantu. Anda TIDAK PERNAH berspekulasi atau memberikan opini pribadi.
 
-        **Aturan Baru:**
-        - Berikan jawaban yang KOMPREHENSIF dan informatif, bukan hanya satu kalimat singkat. 
-        - Jika memungkinkan, gunakan poin-poin (bullet points) atau daftar bernomor untuk menjelaskan beberapa aspek dari suatu topik secara terstruktur.
-        - Analisis "Riwayat Percakapan Sebelumnya" untuk memberikan jawaban yang berkelanjutan dan relevan dengan diskusi yang sedang berjalan.
+        Aturan Baru:
+        - Selalu berikan jawaban yang informatif dan selengkap mungkin, jangan hanya satu kalimat singkat.
+        - Jika memungkinkan, gunakan daftar bernomor agar penjelasan lebih terstruktur dan mudah dibaca.
+        - Perhatikan "Riwayat Percakapan Sebelumnya" untuk memberikan respons yang nyambung dengan diskusi yang sedang berjalan.
+        - hindari Menggunakan ** untuk formatting dalam jawaban anda
 
-        **Aturan Penting Lainnya:**
-        1.  PRIORITASKAN informasi dari "Informasi yang Telah Diverifikasi" di atas segalanya.
-        2.  Jika informasi yang ditanyakan tidak ada, jawab dengan sopan bahwa Anda tidak tahu.
+        Aturan Penting Lainnya:
+        1.  Informasi dari "Informasi yang Telah Diverifikasi" adalah prioritas utama Anda.
+        2.  Jika informasi yang ditanyakan tidak Anda ketahui, sampaikan dengan jujur dan sopan. Contoh: "Mohon maaf, untuk informasi tersebut saat ini belum saya ketahui."
         3.  Jika ada URL gambar yang relevan di informasi, Anda BOLEH menyertakan tag `[IMAGE: url_gambar_disini]`.
-        4.  Jangan pernah menyebut "berdasarkan konteks". Bicaralah seolah Anda sudah tahu.
+        4.  Jangan pernah bilang "berdasarkan informasi yang saya terima" atau "berdasarkan konteks". Berbicaralah seolah-olah Anda memang sudah tahu informasinya.
 
-        **Informasi yang Telah Diverifikasi:**
+        Informasi yang Telah Diverifikasi:
         ---
         {refined_context}
         ---
 
-        **Riwayat Percakapan Sebelumnya:**
+        Riwayat Percakapan Sebelumnya:
         {history}
 
-        **Pertanyaan Terbaru dari Pengguna:** "{user_query}"
+        Pertanyaan Terbaru dari Pengguna: "{user_query}"
 
-        **Jawaban Anda (sebagai Staf SMKN 2 Indramayu):**
+        Jawaban Anda (sebagai Asisten Digital SMKN 2 Indramayu):
         """
         
         chat_session = model.start_chat(history=history)
@@ -186,8 +234,16 @@ def scrape_handler():
     def generate_logs():
         urls_file = 'urls_to_scrape.txt'
         yield f"Membaca file '{urls_file}'...\n"
-        # ... (sisa fungsi tidak berubah)
+        for result in scrape_from_file(urls_file):
+            if result['status'] == 'success':
+                add_scraped_data(result['url'], result['title'], result['content'], result.get('image_url'))
+                yield f"SUCCESS: {result['url']} - {result['title']}\n"
+            elif result['status'] == 'info':
+                yield f"INFO: {result['message']}\n"
+            else:
+                yield f"SKIPPED/ERROR: {result['url']} - {result['reason']}\n"
     return Response(stream_with_context(generate_logs()), mimetype='text/plain')
+
 
 @app.route('/api/reindex', methods=['POST'])
 def reindex_handler():

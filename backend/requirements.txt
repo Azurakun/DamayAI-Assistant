@@ -11,3 +11,4 @@ pypdf
 python-docx
 html2text
 trafilatura
+python-pptx

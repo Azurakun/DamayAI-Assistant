@@ -2,10 +2,49 @@ import requests
 import trafilatura
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+import docx
+import PyPDF2
+from pptx import Presentation
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
+
+def extract_text_from_pdf(file_stream):
+    """Mengekstrak teks dari file PDF."""
+    try:
+        reader = PyPDF2.PdfReader(file_stream)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        return None
+
+def extract_text_from_docx(file_stream):
+    """Mengekstrak teks dari file DOCX."""
+    try:
+        doc = docx.Document(file_stream)
+        return "\n".join([para.text for para in doc.paragraphs])
+    except Exception as e:
+        print(f"Error reading DOCX: {e}")
+        return None
+
+def extract_text_from_pptx(file_stream):
+    """Mengekstrak teks dari file PPTX."""
+    try:
+        prs = Presentation(file_stream)
+        text = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    text.append(shape.text)
+        return "\n".join(text)
+    except Exception as e:
+        print(f"Error reading PPTX: {e}")
+        return None
+
 
 def extract_single_page(url):
     """
