@@ -1,0 +1,13 @@
+Flask
+python-dotenv
+google-generativeai
+langchain
+langchain-community
+langchain-google-genai
+beautifulsoup4
+requests
+faiss-cpu
+pypdf
+python-docx
+html2text
+trafilatura

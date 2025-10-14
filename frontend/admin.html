@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-mono">
+
+    <div id="auth-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg text-center">
+            <h2 class="text-2xl mb-4">Akses Panel Admin</h2>
+            <p class="mb-6 text-gray-400">Masukkan kode untuk melanjutkan.</p>
+            <input type="password" id="admin-code" class="bg-gray-700 text-white p-3 rounded-lg w-full text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="******">
+            <p id="error-msg" class="text-red-400 mt-2 h-5"></p>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="container mx-auto p-8 hidden">
+        <h1 class="text-3xl font-bold mb-2 text-blue-400">Admin Panel - DamayAI</h1>
+        <p class="text-sm text-gray-500 mb-6">PENTING: Setelah mengubah/menghapus data, selalu klik 'Rebuild FAISS Index' agar AI terupdate.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
+                    <h2 class="text-lg font-semibold text-gray-300">Kontrol Data</h2>
+                    <button id="tutorial-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-sm rounded">Buka Tutorial</button>
+                </div>
+                
+                <h3 class="text-md font-semibold text-gray-400 mb-2">Workflow Utama</h3>
+                <div class="space-y-3">
+                    <button id="scrape-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">1. Scrape URLs dari File</button>
+                    <button id="reindex-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">2. Rebuild FAISS Index</button>
+                    <button id="view-data-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg">Lihat Data Scraped</button>
+                </div>
+
+                <h3 class="text-md font-semibold text-gray-400 mt-6 mb-2">Tindakan Berbahaya</h3>
+                <div class="space-y-3">
+                    <button id="delete-faiss-btn" class="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-3 px-4 rounded-lg">Hapus Index FAISS</button>
+                    <button id="delete-db-btn" class="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-3 px-4 rounded-lg">Hapus Database (Reset Total)</button>
+                </div>
+            </div>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                 <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Status Sistem</h2>
+                 <p class="text-gray-400">Status Proses: <span id="status" class="font-semibold text-yellow-400">Idle</span></p>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-semibold mb-4 text-gray-300">Log Proses Scraping & Indexing</h2>
+            <div id="console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar">
+                <p class="text-gray-500">> Menunggu perintah... (Workflow: Tambah URL ke file, Scrape, lalu Rebuild Index)</p>
+            </div>
+        </div>
+        
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-300">Uji Coba AI & Proses Berpikir Real-time</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-300 mb-4">Ajukan Pertanyaan</h3>
+                    <form id="admin-chat-form">
+                        <textarea id="admin-chat-input" rows="4" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik pertanyaan Anda di sini untuk melihat proses berpikir AI..."></textarea>
+                        <button type="submit" id="admin-chat-submit" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Kirim & Analisis</button>
+                    </form>
+                </div>
+                <div>
+                    <div id="thinking-console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar">
+                        <p class="text-gray-500">> Menunggu pertanyaan untuk dianalisis...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tutorial-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 text-white rounded-lg shadow-xl w-11/12 max-w-2xl h-5/6 flex flex-col">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Tutorial Penggunaan Panel Admin</h2>
+                <button id="close-tutorial-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-6 text-gray-300">
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-2">Workflow Utama (Menambah Pengetahuan AI)</h3>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li><b>Tambah URL</b>: Buka file `backend/urls_to_scrape.txt` di editor kode Anda. Tambahkan URL artikel atau halaman yang ingin Anda jadikan pengetahuan AI. Setiap URL diletakkan di baris baru.</li>
+                        <li><b>Scrape URLs</b>: Klik tombol <b class="text-blue-400">"1. Scrape URLs dari File"</b>. Proses ini akan mengambil data teks dan gambar dari semua URL di file tersebut dan menyimpannya ke database.</li>
+                        <li><b>Rebuild Index</b>: Setelah scraping selesai, klik tombol <b class="text-green-400">"2. Rebuild FAISS Index"</b>. Ini adalah langkah PENTING untuk membuat data yang baru di-scrape bisa dicari oleh AI.</li>
+                    </ol>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-2">Manajemen Data</h3>
+                    <p>Klik tombol <b class="text-gray-400">"Lihat Data Scraped"</b> untuk membuka panel manajemen data. Di sana Anda bisa:</p>
+                    <ul class="list-disc list-inside ml-4 space-y-1">
+                        <li><b>Mencari Data</b>: Gunakan search bar untuk memfilter data berdasarkan kata kunci.</li>
+                        <li><b>Melihat Detail</b>: Klik tombol "Detail" untuk melihat seluruh konten dan gambar dari sebuah data.</li>
+                        <li><b>Mengubah Data</b>: Klik "Ubah" untuk mengedit judul atau konten jika ada kesalahan.</li>
+                        <li><b>Menghapus Data</b>: Klik "Hapus" untuk menghapus satu item data dari database.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-400 mb-2">Pelatihan AI (Memory Bank)</h3>
+                    <p>Gunakan bagian "Uji Coba AI" untuk melatih AI secara langsung:</p>
+                     <ol class="list-decimal list-inside space-y-2">
+                        <li>Ajukan pertanyaan untuk melihat bagaimana AI merespons.</li>
+                        <li>Jika jawaban kurang tepat, **klik pada teks jawaban** dan edit langsung di sana.</li>
+                        <li>Setelah jawaban sudah benar, klik tombol <b class="text-green-400">"Simpan ke Memori"</b>. Jawaban ini akan menjadi prioritas untuk pertanyaan serupa di masa depan.</li>
+                    </ol>
+                </div>
+                 <div>
+                    <h3 class="text-lg font-semibold text-red-500 mb-2">Tindakan Berbahaya</h3>
+                    <ul class="list-disc list-inside ml-4 space-y-1">
+                        <li><b>Hapus Index FAISS</b>: Gunakan ini jika Anda merasa pencarian AI error. Anda harus menjalankan "Rebuild Index" lagi setelahnya.</li>
+                        <li><b>Hapus Database (Reset Total)</b>: Ini akan menghapus SEMUA data scraping dan memori. Gunakan jika Anda ingin memulai dari awal. Anda harus melakukan scraping dan re-indexing dari nol setelahnya.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="data-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 text-white rounded-lg shadow-xl w-11/12 max-w-4xl h-5/6 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="modal-title" class="text-xl font-bold">Data yang Telah Di-Scrape</h2>
+                    <button id="close-modal-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                <input type="search" id="search-data-input" placeholder="Cari berdasarkan judul atau konten..." class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div id="modal-content-list" class="p-6 overflow-y-auto custom-scrollbar"></div>
+            <div id="modal-content-edit" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
+            <div id="modal-content-detail" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

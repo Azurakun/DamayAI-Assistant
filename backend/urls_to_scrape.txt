@@ -1,0 +1,77 @@
+# --- Daftar URL untuk di-scrape ---
+# Letakkan setiap URL di baris baru.
+# Baris yang diawali dengan tanda # akan diabaikan.
+# Anda bisa menambahkan URL artikel, pengumuman, atau halaman profil di sini.
+
+# Text-only:
+https://smkn2indramayu.sch.id/
+https://smkn2indramayu.sch.id/sambutan-kepala-sekolah
+https://smkn2indramayu.sch.id/read/15/selayang-pandang
+https://smkn2indramayu.sch.id/read/16/sejarah-singkat
+https://smkn2indramayu.sch.id/read/3/visi-dan-misi
+https://smkn2indramayu.sch.id/read/17/tata-tertib-sekolah
+
+
+# Image:
+https://smkn2indramayu.sch.id/read/36/struktur-organisasi
+https://smkn2indramayu.sch.id/read/18/denah-sekolah
+
+# Image + Text
+https://smkn2indramayu.sch.id/read/19/logo-motto
+https://smkn2indramayu.sch.id/read/25/ruang-praktik-nkpi
+https://smkn2indramayu.sch.id/read/26/ruang-praktik-aphpi
+https://smkn2indramayu.sch.id/read/29/ruang-praktik-tjkt
+https://smkn2indramayu.sch.id/read/30/ruang-praktik-pplg
+https://smkn2indramayu.sch.id/read/24/ruang-praktik-teknik-alat-berat
+https://smkn2indramayu.sch.id/read/27/ruang-praktik-kuliner
+https://smkn2indramayu.sch.id/read/28/ruang-praktik-aquakultur
+https://smkn2indramayu.sch.id/read/93/masjid
+https://smkn2indramayu.sch.id/read/32/ruang-belajar
+https://smkn2indramayu.sch.id/read/23/ruang-praktik-spw
+
+# Staff Data 
+https://smkn2indramayu.sch.id/direktori-guru-dan-tenaga-kependidikan
+
+# News
+https://smkn2indramayu.sch.id/read/96/bapak-egar-prayudha-spi-menjadi-narasumber-dalam-kegiatan-bimbingan-teknis-bantuan-pemerintah-pengajaran-berbasis-pabrik-teaching-factory-skema-regular-tahap-ii-tahun-2025
+https://smkn2indramayu.sch.id/read/81/hari-pertama-masuk-sekolah-smkn-2-indramayu-sambut-siswa-dengan-semangat-baru
+https://smkn2indramayu.sch.id/read/14/praktik-survival-at-sea-di-smkn-2-indramayu-membentuk-calon-pelaut-tangguh
+https://smkn2indramayu.sch.id/read/12/sesi-3kegiatan-university-day-di-smkn-2-indramayu-mempersiapkan-siswa-menyongsong-masa-depan
+https://smkn2indramayu.sch.id/read/11/smkn-2-indramayu-berbagi-takjil-di-hari-pertama-ramadan-100-paket-dibagikan-di-bunderan-jam
+https://smkn2indramayu.sch.id/read/9/bkk-smkn-2-indramayu-fasilitasi-mcu-bagi-siswa-kelas-xii-dan-alumni-untuk-persiapan-kerja-ke-jepang
+https://smkn2indramayu.sch.id/read/4/dua-investasi-yang-harus-dimiliki-oleh-tarunai-smkn-2-indramayu
+https://smkn2indramayu.sch.id/read/46/taruni-smkn-2-indramayu-raih-medali-perak-di-piala-pertiwi-u16
+https://smkn2indramayu.sch.id/read/69/smkn-2-indramayu-tampilkan-produk-unggulan-di-ajang-jawara-2025-dinas-pendidikan-provinsi-jawa-barat
+https://smkn2indramayu.sch.id/read/68/pembelajaran-inovatif-seni-budaya-di-smkn-2-indramayu-dari-teori-ke-aksi-siswa-ciptakan-rencana-pagelaran-dan-pameran-karya
+https://smkn2indramayu.sch.id/read/67/inovasi-pembelajaran-sejarah-di-smkn-2-indramayu-pagelaran-sejarah-kerajaan-hidupkan-semangat-belajar-siswa
+https://smkn2indramayu.sch.id/read/66/upacara-pelepasan-siswa-kelas-xii-smkn-2-indramayu-angkatan-20-tahun-pelajaran-20242025-berlangsung-sederhana-dan-khidmat
+https://smkn2indramayu.sch.id/read/64/sistem-penerimaan-murid-baru-spmb-smkn-2-indramayu-tahun-2025-segera-dibuka
+https://smkn2indramayu.sch.id/read/60/smkn-2-indramayu-peringati-hari-kebangkitan-nasional-ke-117-tahun-2025-bangkit-bersama-wujudkan-indonesia-kuat
+https://smkn2indramayu.sch.id/read/59/smkn-2-indramayu-dan-lembaga-pendidikan-bahasa-korea-silla-tandatangani-mou-penguatan-kompetensi-bahasa-korea-untuk-dunia-kerja
+https://smkn2indramayu.sch.id/read/56/smkn-2-indramayu-lepas-10-alumni-untuk-ikuti-pendidikan-bahasa-sebelum-bekerja-di-jepang
+https://smkn2indramayu.sch.id/read/55/semangat-membaca-warnai-kegiatan-literasi-pagi-smkn-2-indramayu
+https://smkn2indramayu.sch.id/read/54/hari-kedua-pengabdian-mahasiswa-teknik-komputer-unwir-siswa-smkn-2-indramayu-antusias-belajar-coding-arduino
+https://smkn2indramayu.sch.id/read/51/mahasiswa-teknik-komputer-universitas-wiralodra-kenalkan-materi-robotik-ke-siswa-smkn-2-indramayu
+https://smkn2indramayu.sch.id/read/46/taruni-smkn-2-indramayu-raih-medali-perak-di-piala-pertiwi-u16
+https://smkn2indramayu.sch.id/read/77/smkn-2-indramayu-raih-juara-1-lks-jabar-bidang-lomba-teknik-alat-berat
+https://smkn2indramayu.sch.id/read/76/smk-negeri-2-indramayu-laksanakan-pembagian-rapor-semester-genap-tahun-ajaran-20242025
+https://smkn2indramayu.sch.id/read/75/smkn-2-indramayu-fasilitasi-rekrutmen-kerja-bank-btpn-melalui-bkk
+https://smkn2indramayu.sch.id/read/74/smkn-2-indramayu-gelar-rapat-pleno-kenaikan-kelas-tahun-ajaran-20242025
+https://smkn2indramayu.sch.id/read/73/smkn-2-indramayu-jadi-tempat-pelaksanaan-tes-rekrutmen-alfamidi-2025
+https://smkn2indramayu.sch.id/read/89/dua-alumni-nkpi-smkn-2-indramayu-raih-prestasi-membanggakan-dicky-ramadani-lolos-seleksi-politeknik-kp-karawang-ali-majid-diterima-di-tni-ad
+https://smkn2indramayu.sch.id/read/88/penutupan-mpls-smkn-2-indramayu-2025-penghargaan-bagi-peserta-terbaik-dan-harapan-baru-bagi-taruna-taruni
+https://smkn2indramayu.sch.id/read/87/aksi-ekologi-smksma-kecamatan-indramayu-smkn-2-indramayu-turun-langsung-dipimpin-kepala-sekolah-dan-kolaborasi-bersama-tni-dan-polri
+https://smkn2indramayu.sch.id/read/86/mengenal-lingkungan-sejak-dini-materi-ekologi-warnai-mpls-smkn-2-indramayu
+https://smkn2indramayu.sch.id/read/85/materi-mpls-sesi-ke-2-8-dimensi-profil-lulusan
+https://smkn2indramayu.sch.id/read/84/kunjungan-pt-wings-ke-smk-negeri-2-indramayu-buka-peluang-kerjasama-rekrutmen-alumni
+https://smkn2indramayu.sch.id/read/83/sesi-1-mpls-smk-negeri-2-indramayu-penanaman-nilai-karakter-melalui-pendidikan-pancawaluya
+https://smkn2indramayu.sch.id/read/82/pembukaan-mpls-smkn-2-indramayu-tahun-2025-wujudkan-sekolah-ramah-dan-inspiratif-bagi-siswa-baru
+https://smkn2indramayu.sch.id/read/81/hari-pertama-masuk-sekolah-smkn-2-indramayu-sambut-siswa-dengan-semangat-baru
+https://smkn2indramayu.sch.id/read/98/upacara-peringatan-hut-ke-80-republik-indonesia-di-smk-negeri-2-indramayu-berlangsung-khidmat
+https://smkn2indramayu.sch.id/read/97/jalan-santai-meriahkan-hut-ke-80-republik-indonesia-di-smk-negeri-2-indramayu
+https://smkn2indramayu.sch.id/read/96/bapak-egar-prayudha-spi-menjadi-narasumber-dalam-kegiatan-bimbingan-teknis-bantuan-pemerintah-pengajaran-berbasis-pabrik-teaching-factory-skema-regular-tahap-ii-tahun-2025
+https://smkn2indramayu.sch.id/read/94/kegiatan-literasi-berbahasa-inggris-di-smk-negeri-2-indramayu
+https://smkn2indramayu.sch.id/read/102/apresiasi-ekologi-vokasi-untuk-siswa-smk-negeri-2-indramayu-jaelani-dan-soni-teladan-ketangguhan-dan-kemandirian
+https://smkn2indramayu.sch.id/read/101/bkk-smk-negeri-2-indramayu-fasilitasi-calon-tenaga-kerja-ke-pt-chemco-cikarang
+https://smkn2indramayu.sch.id/read/99/marching-band-gita-bahari-mbgb-smk-negeri-2-indramayu-raih-10-piala-di-festival-marching-band-indramayu-2025
+
