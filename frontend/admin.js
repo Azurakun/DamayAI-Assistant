@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const tutorialBtn = document.getElementById('tutorial-btn');
     const tutorialModal = document.getElementById('tutorial-modal');
     const closeTutorialBtn = document.getElementById('close-tutorial-btn');
+    const manualAddForm = document.getElementById('manual-add-form');
+    const manualSubmitBtn = document.getElementById('manual-submit-btn');
+    const manualFileInput = document.getElementById('manual-file');
+    const fileUploadFilename = document.getElementById('file-upload-filename');
+
     let currentDataCache = [];
     let adminChatHistory = []; // Riwayat chat untuk panel admin
     const ADMIN_CODE = '355123';
@@ -60,6 +65,60 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteDbBtn.addEventListener('click', async () => {
         if (confirm("ANDA YAKIN ingin menghapus seluruh DATABASE?\nIni akan menghapus SEMUA data scraping dan memori (reset total).")) {
             await performAction('/api/delete_db', 'Menghapus Database...');
+        }
+    });
+    
+    manualFileInput.addEventListener('change', () => {
+        if (manualFileInput.files.length > 0) {
+            fileUploadFilename.textContent = manualFileInput.files[0].name;
+        } else {
+            fileUploadFilename.textContent = 'Pilih File (.pdf, .docx, .pptx)';
+        }
+    });
+    
+    // --- Manual Data Addition ---
+    manualAddForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const title = document.getElementById('manual-title').value;
+        const content = document.getElementById('manual-content').value;
+        const file = manualFileInput.files[0];
+
+        if (!content && !file) {
+            alert('Silakan isi konten teks atau pilih sebuah file.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('content', content);
+        if (file) {
+            formData.append('file', file);
+        }
+
+        manualSubmitBtn.disabled = true;
+        manualSubmitBtn.textContent = 'Menambahkan...';
+        
+        try {
+            const response = await fetch('/api/add_manual_data', {
+                method: 'POST',
+                body: formData, // FormData akan secara otomatis mengatur Content-Type
+            });
+            
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                alert('Data manual berhasil ditambahkan. Jangan lupa Rebuild Index!');
+                manualAddForm.reset();
+                fileUploadFilename.textContent = 'Pilih File (.pdf, .docx, .pptx)';
+            } else {
+                throw new Error(result.message || 'Terjadi kesalahan pada server.');
+            }
+        } catch (error) {
+            alert(`Gagal menambahkan data: ${error.message}`);
+        } finally {
+            manualSubmitBtn.disabled = false;
+            manualSubmitBtn.textContent = 'Tambah Data & Pengetahuan';
         }
     });
     
@@ -239,6 +298,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         }).join('');
+
+        // Re-attach event listeners
+        document.querySelectorAll('.detail-btn').forEach(btn => btn.addEventListener('click', (e) => showDetailView(e.target.dataset.id)));
+        document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', (e) => showEditFormView(e.target.dataset.id)));
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => {
+            if (confirm('Anda yakin ingin menghapus item ini?')) {
+                deleteDataItem(e.target.dataset.id);
+            }
+        }));
     }
 
     // --- Fungsi CRUD ---
@@ -249,7 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.status === 'success') {
                 // Hapus dari cache dan re-render
                 currentDataCache = currentDataCache.filter(item => item.id != id);
-                displayData(currentDataCache);
+                displayData(currentDataCache.filter(item => {
+                     const query = searchDataInput.value.toLowerCase();
+                    return (item.title || '').toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query)
+                }));
                 alert('Data berhasil dihapus. Jangan lupa Rebuild Index!');
             } else {
                 throw new Error(result.message);
@@ -393,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const p = document.createElement('p');
                     p.textContent = `> ${line}`;
                     if(line.toLowerCase().includes('error')) p.className = 'text-red-400';
-                    else if(line.toLowerCase().includes('success')) p.className = 'text-green-400';
+                    else if(line.toLowerCase().includes('success') || line.toLowerCase().includes('berhasil')) p.className = 'text-green-400';
                     else p.className = 'text-gray-300';
                     consoleDiv.appendChild(p);
                 });
@@ -416,4 +487,13 @@ document.addEventListener('DOMContentLoaded', () => {
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
     }
+    
+    // Initial listeners for data management modal
+    searchDataInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filteredData = currentDataCache.filter(item => {
+            return (item.title || '').toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query)
+        });
+        displayData(filteredData);
+    });
 });
