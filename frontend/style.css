@@ -1,64 +1,144 @@
-/* General Body Style */
+/* Pengaturan Dasar dan Font */
 body {
-    background: linear-gradient(170deg, #e6f7ff 0%, #f0f9ff 100%);
+    font-family: 'Inter', sans-serif;
 }
 
-/* Chat Container */
-#chat-container .chat-bubble {
-    opacity: 0;
-    transform: translateY(10px);
-    animation: fadeIn 0.5s ease-out forwards;
+/* Scrollbar Kustom */
+#chat-area::-webkit-scrollbar {
+    width: 8px;
+}
+#chat-area::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+#chat-area::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+}
+#chat-area::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
 }
 
-/* AI Chat Bubble Style */
-.ai-bubble {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-}
-
-.ai-bubble p {
-    color: #374151; /* Darker gray for better readability */
-}
-
-/* User Chat Bubble Style */
-.user-bubble {
-    background-color: #2563eb; /* A nice blue */
-    color: #ffffff;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
-}
-
-/* Input Form Style */
-#chat-form {
-    transition: box-shadow 0.2s ease-in-out;
-}
-
-#chat-form:focus-within {
-    box-shadow: 0 0 0 2px #3b82f6;
-    border-radius: 0.5rem;
-}
-
-#chat-input {
-    transition: border-color 0.2s ease-in-out;
-}
-
-/* Send Button Style */
-#send-btn {
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-}
-
-#send-btn:hover {
-    background-color: #1d4ed8;
-}
-
-#send-btn:active {
-    transform: scale(0.95);
-}
-
-/* Keyframe Animation for Fade-in Effect */
-@keyframes fadeIn {
-    to {
+/* Keyframe Animations */
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1) translateY(0);
     }
 }
+
+@keyframes dot-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Kontainer Utama Aplikasi */
+#app-container {
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Bubble Chat dan Avatar */
+.chat-bubble {
+    animation: popIn 0.4s ease-out forwards;
+}
+
+.avatar-ai, .avatar-user {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border: 2px solid white;
+}
+
+.avatar-ai {
+    background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+}
+
+.avatar-user {
+    background: linear-gradient(145deg, #6b7280, #374151);
+}
+
+.message-content {
+    padding: 1rem 1.25rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.07);
+    max-width: calc(100% - 60px);
+    position: relative;
+}
+
+.ai-bubble {
+    background-color: #ffffff;
+    color: #1f2937;
+    border-top-left-radius: 0.5rem;
+}
+
+.user-bubble {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border-top-right-radius: 0.5rem;
+}
+
+/* Tombol Aksi (TTS, Salin, dll.) */
+.action-buttons {
+    position: absolute;
+    bottom: -15px;
+    left: 15px;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    transform: translateY(10px);
+}
+.message-content:hover .action-buttons {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.action-btn {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.action-btn:hover {
+    background-color: #f3f4f6;
+    color: #3b82f6;
+    transform: scale(1.1);
+}
+
+/* Indikator Pengetikan */
+.typing-indicator-bubble {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+}
+.typing-dot {
+    width: 9px;
+    height: 9px;
+    background-color: #9ca3af;
+    border-radius: 50%;
+    animation: dot-pulse 1.4s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }

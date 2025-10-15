@@ -17,7 +17,7 @@ os.makedirs("db", exist_ok=True)
 init_db()
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/')
-model = genai.GenerativeModel(model_name="gemini-2.5-pro")
+model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'pptx'}
 
