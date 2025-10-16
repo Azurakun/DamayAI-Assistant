@@ -1,4 +1,9 @@
 /* Pengaturan Dasar dan Font */
+html, body {
+    height: 100%;
+    overflow: hidden; /* Mencegah body dari scrolling */
+}
+
 body {
     font-family: 'Inter', sans-serif;
 }

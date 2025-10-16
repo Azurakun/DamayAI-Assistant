@@ -11,15 +11,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 md:flex md:items-center md:justify-center">
 
     <div id="app-container" class="w-full h-full md:w-[95vw] md:h-[95vh] md:max-w-6xl bg-white rounded-none md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
         <header class="bg-white/95 backdrop-blur-sm p-4 border-b border-gray-200 flex justify-between items-center z-20 flex-shrink-0">
-            <div class="flex items-center space-x-4">
-                <img src="favicon.png" alt="Logo" class="h-11 w-11 rounded-full border-2 border-blue-500 p-0.5">
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <img src="favicon.png" alt="Logo" class="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-2 border-blue-500 p-0.5">
                 <div>
-                    <h1 class="text-lg font-bold text-gray-900">Asisten AI SMKN 2 Indramayu</h1>
+                    <h1 class="text-base sm:text-lg font-bold text-gray-900">Asisten AI SMKN 2 Indramayu</h1>
                     <p class="text-xs text-green-600 font-semibold flex items-center gap-1.5">
                         <span class="relative flex h-2 w-2">
                           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -29,9 +29,14 @@
                     </p>
                 </div>
             </div>
-            <button id="new-chat-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                <i class="fas fa-plus-circle"></i>Obrolan Baru
-            </button>
+            <div class="flex items-center">
+                <button id="bug-report-btn" class="px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all duration-300 flex items-center sm:gap-2 text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 mr-2">
+                    <i class="fas fa-bug"></i><span class="hidden sm:inline">Lapor Bug</span>
+                </button>
+                <button id="new-chat-btn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center sm:gap-2 text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fas fa-plus-circle"></i><span class="hidden sm:inline">Obrolan Baru</span>
+                </button>
+            </div>
         </header>
 
         <main id="chat-area" class="flex-1 overflow-y-auto p-6 bg-gray-50">
@@ -53,9 +58,37 @@
                         <i class="fas fa-arrow-up"></i>
                     </button>
                 </form>
+                <div class="text-center text-xs text-gray-500 mt-2">
+                    <p>Versi Beta Test v1.62.2 - 17 Oktober 2025</p>
+                    <p>AI sangat bisa salah, silakan periksa kembali informasi.</p>
+                </div>
             </div>
         </footer>
 
+    </div>
+
+    <div id="bug-report-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-lg">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Laporkan Bug</h2>
+                <button id="close-bug-report-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <form id="bug-report-form">
+                    <div class="mb-4">
+                        <label for="bug-description" class="block text-sm font-medium text-gray-700 mb-1">Jelaskan masalahnya</label>
+                        <textarea id="bug-description" name="description" rows="5" class="w-full bg-gray-100 text-gray-800 p-2 rounded-md border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" required></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label for="bug-file" class="block text-sm font-medium text-gray-700 mb-1">Unggah Gambar atau Video (Opsional)</label>
+                        <input type="file" id="bug-file" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept="image/*,video/*">
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" id="submit-bug-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Kirim Laporan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

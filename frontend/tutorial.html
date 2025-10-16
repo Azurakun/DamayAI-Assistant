@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* Basic styling for tutorial content */
+        .tutorial-content h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            color: #93c5fd; /* text-blue-300 */
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #4b5563; /* border-gray-600 */
+        }
+        .tutorial-content h4 {
+            font-size: 1rem; /* text-base */
+            font-weight: 600; /* font-semibold */
+            color: #d1d5db; /* text-gray-300 */
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .tutorial-content p, .tutorial-content li {
+            color: #d1d5db; /* text-gray-300 */
+            line-height: 1.6;
+        }
+        .tutorial-content ol, .tutorial-content ul {
+            margin-left: 1.25rem; /* ml-5 */
+            margin-bottom: 1rem;
+        }
+        .tutorial-content ol {
+            list-style-type: decimal;
+        }
+        .tutorial-content ul {
+            list-style-type: disc;
+        }
+        .tutorial-content b, .tutorial-content strong {
+            color: #f9fafb; /* text-gray-50 */
+            font-weight: 600;
+        }
+        .tutorial-content code {
+            background-color: #1f2937; /* bg-gray-800 */
+            color: #fca5a5; /* text-red-300 */
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="tutorial-content space-y-6">
+        <div>
+            <h3>Workflow Utama: Menambah Pengetahuan AI</h3>
+            <p>Ini adalah alur kerja standar setiap kali Anda ingin AI mempelajari informasi baru dari website atau dokumen.</p>
+            <ol>
+                <li>
+                    <b>Scrape URL dari File</b>:
+                    <ul>
+                        <li>Buka file <code>backend/urls_to_scrape.txt</code>.</li>
+                        <li>Tambahkan URL halaman web yang ingin datanya diambil oleh AI. Pastikan setiap URL berada di baris baru.</li>
+                        <li>Kembali ke panel admin, klik tombol <b style="color: #60a5fa;">1. Scrape URLs dari File</b>. Proses ini akan mengambil semua teks dari URL tersebut dan menyimpannya ke dalam database internal.</li>
+                    </ul>
+                </li>
+                <li>
+                    <b>Tambah Data Manual</b>:
+                    <ul>
+                        <li>Gunakan formulir "Tambah Data Manual" untuk memasukkan informasi yang tidak ada di website.</li>
+                        <li>Anda bisa mengetik teks langsung di kolom "Konten Teks" atau mengunggah file (PDF, Word, PowerPoint) melalui tombol "Pilih File".</li>
+                        <li>Setelah mengisi, klik <b style="color: #818cf8;">Tambah Data & Pengetahuan</b>.</li>
+                    </ul>
+                </li>
+                <li>
+                    <b>Rebuild FAISS Index</b>:
+                    <ul>
+                        <li>Ini adalah langkah <b>PALING PENTING</b>. Setelah Anda selesai melakukan scraping atau menambah data manual, Anda <b>WAJIB</b> mengklik tombol <b style="color: #4ade80;">2. Rebuild FAISS Index</b>.</li>
+                        <li>Proses ini "mengajarkan" AI tentang semua data baru yang telah Anda tambahkan, baik dari hasil scraping maupun data manual (termasuk "Memory Bank"). Tanpa langkah ini, AI tidak akan mengetahui informasi baru tersebut.</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div>
+            <h3>Manajemen Data & Laporan Bug</h3>
+            <h4>Lihat/Ubah Data Scraped</h4>
+            <p>Gunakan fitur ini untuk mengelola semua data yang telah di-scrape atau ditambahkan secara manual.</p>
+            <ul>
+                <li><b>Mencari Data</b>: Gunakan search bar untuk memfilter data berdasarkan kata kunci.</li>
+                <li><b>Melihat Detail</b>: Klik tombol "Detail" untuk melihat seluruh konten dari sebuah data.</li>
+                <li><b>Mengubah Data</b>: Klik "Ubah" untuk mengedit judul atau konten jika ada kesalahan. <b>Ingat</b>: Setelah mengubah, Anda harus "Rebuild FAISS Index" lagi.</li>
+                <li><b>Menghapus Data</b>: Klik "Hapus" untuk menghapus satu item data. <b>Ingat</b>: Setelah menghapus, Anda harus "Rebuild FAISS Index" lagi.</li>
+            </ul>
+            <h4>Lihat Laporan Bug</h4>
+            <p>Menu ini digunakan untuk melihat dan mengelola laporan masalah yang dikirim oleh pengguna.</p>
+            <ul>
+                <li><b>Filter Status</b>: Gunakan tombol filter ("Semua", "Baru", "Selesai", dll.) untuk menyaring laporan berdasarkan statusnya.</li>
+                <li><b>Mengubah Status</b>: Anda bisa langsung mengubah status laporan melalui menu dropdown di sebelah kanan setiap item (misalnya dari "Baru" menjadi "Sedang Diproses").</li>
+                <li><b>Melihat Detail</b>: Klik "Detail" untuk melihat deskripsi lengkap dan file lampiran (gambar/video) yang dikirim pengguna.</li>
+                <li><b>Menghapus Laporan</b>: Klik "Hapus" untuk menghilangkan laporan bug yang sudah tidak relevan.</li>
+            </ul>
+        </div>
+
+        <div>
+            <h3>Uji Coba & Pelatihan AI (Memory Bank)</h3>
+            <p>Fitur ini adalah cara paling efektif untuk "memaksa" AI memberikan jawaban yang pasti dan benar untuk pertanyaan-pertanyaan spesifik.</p>
+            <ol>
+                <li><b>Ajukan Pertanyaan</b>: Di bagian "Uji Coba AI", ketik pertanyaan yang sering ditanyakan atau yang jawabannya sering salah. Klik <b>Kirim & Analisis</b>.</li>
+                <li><b>Analisis Proses Berpikir</b>: Perhatikan konsol di sebelah kanan. Anda akan melihat dari sumber mana AI mengambil informasi (ditandai `[Memory Bank]` atau `[Scraped Data]`).</li>
+                <li><b>Koreksi Jawaban</b>: Jika jawaban akhir yang diberikan AI kurang tepat, <b>klik pada teks jawaban tersebut</b>. Anda bisa langsung mengedit dan memperbaiki kalimatnya menjadi jawaban yang ideal.</li>
+                <li><b>Simpan ke Memori</b>: Setelah Anda puas dengan jawaban yang sudah dikoreksi, klik tombol <b style="color: #4ade80;">Simpan ke Memori</b>.
+                <br>Tindakan ini akan menyimpan pasangan Pertanyaan-Jawaban tersebut ke "Memory Bank". Untuk pertanyaan serupa di masa depan, AI akan memprioritaskan jawaban ini.</li>
+                <li><b>Rebuild Index</b>: Setelah menyimpan ke memori, jangan lupa untuk kembali ke atas dan klik <b style="color: #4ade80;">2. Rebuild FAISS Index</b> agar memori baru tersebut bisa digunakan oleh AI.</li>
+            </ol>
+        </div>
+
+         <div>
+            <h3 style="color: #f87171;">Tindakan Berbahaya</h3>
+            <p>Gunakan tombol-tombol ini dengan sangat hati-hati karena dapat menghapus data secara permanen.</p>
+            <ul>
+                <li><b>Hapus Index FAISS</b>: Gunakan ini hanya jika Anda merasa pencarian AI error atau tidak konsisten. Setelah menghapus, Anda harus menjalankan "Rebuild FAISS Index" lagi untuk membangun ulang dari awal.</li>
+                <li><b>Hapus Database (Reset Total)</b>: Ini akan menghapus <b>SEMUA</b> data hasil scraping, data manual, dan "Memory Bank". Gunakan ini jika Anda ingin memulai ulang pengumpulan data dari nol. Setelah ini, Anda harus melakukan scraping dan re-indexing dari awal.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
