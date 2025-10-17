@@ -5,8 +5,13 @@ import google.generativeai as genai
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from dotenv import load_dotenv
 from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_docx, extract_text_from_pptx
-from vector_store import create_vector_db, get_retriever
-from database import init_db, add_scraped_data, get_all_scraped_data, update_data, delete_data, add_to_memory, add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report
+from vector_store import create_vector_db, get_retrievers
+from database import (
+    init_db, add_scraped_data, get_all_scraped_data, update_scraped_data, delete_scraped_data,
+    add_to_memory, get_all_memory_data, update_memory_data, delete_memory_data,
+    add_manual_data, get_all_manual_data, update_manual_data, delete_manual_data,
+    add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report
+)
 from werkzeug.utils import secure_filename
 
 load_dotenv()
@@ -20,17 +25,18 @@ init_db()
 app = Flask(__name__, static_folder='../frontend', static_url_path='/')
 model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
-# --- Bagian ini berisi semua endpoint API yang sudah ada dan tidak diubah ---
+FAISS_MEMORY_PATH = "db/faiss_index_memory"
+FAISS_MANUAL_PATH = "db/faiss_index_manual"
+FAISS_SCRAPED_PATH = "db/faiss_index_scraped"
+
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'pptx'}
 ALLOWED_BUG_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi'}
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def allowed_bug_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_BUG_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_BUG_EXTENSIONS
 
 @app.route('/api/report_bug', methods=['POST'])
 def report_bug_handler():
@@ -76,30 +82,51 @@ def delete_bug_handler(report_id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/add_manual_data', methods=['POST'])
-def add_manual_data_handler():
+
+@app.route('/api/add_manual_text', methods=['POST'])
+def add_manual_text_handler():
     try:
-        title = request.form.get('title', 'Tanpa Judul')
-        content = request.form.get('content', '')
+        data = request.json
+        title = data.get('title', 'Tanpa Judul')
+        content = data.get('content', '')
+        if not content.strip():
+            return jsonify({"status": "error", "message": "Konten teks tidak boleh kosong."}), 400
+        
+        source_name = f"manual-text-{title}"
+        add_manual_data(source_name=source_name, title=title, content=content)
+        return jsonify({"status": "success", "message": "Data teks manual berhasil ditambahkan."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/add_manual_file', methods=['POST'])
+def add_manual_file_handler():
+    try:
+        title = request.form.get('title', '')
         file = request.files.get('file')
-        if not content and not file:
-            return jsonify({"status": "error", "message": "Konten atau file harus disediakan."}), 400
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            if not title or title == 'Tanpa Judul':
-                title = filename
-            file_content = ""
-            if filename.lower().endswith('.pdf'):
-                file_content = extract_text_from_pdf(file.stream)
-            elif filename.lower().endswith('.docx'):
-                file_content = extract_text_from_docx(file.stream)
-            elif filename.lower().endswith('.pptx'):
-                file_content = extract_text_from_pptx(file.stream)
-            if file_content is None:
-                 return jsonify({"status": "error", "message": "Gagal mengekstrak teks dari file."}), 500
-            content = f"{content}\n\n--- Isi dari {filename} ---\n{file_content}".strip()
-        add_scraped_data(url=f"manual-input-{title}", title=title, content=content, image_url=None)
-        return jsonify({"status": "success", "message": "Data berhasil ditambahkan secara manual."})
+
+        if not file or not allowed_file(file.filename):
+            return jsonify({"status": "error", "message": "File tidak valid atau tidak disediakan."}), 400
+
+        filename = secure_filename(file.filename)
+        final_title = title if title.strip() else os.path.splitext(filename)[0]
+        
+        content = ""
+        ext = filename.rsplit('.', 1)[1].lower()
+        if ext == 'pdf':
+            content = extract_text_from_pdf(file.stream)
+        elif ext == 'docx':
+            content = extract_text_from_docx(file.stream)
+        elif ext == 'pptx':
+            content = extract_text_from_pptx(file.stream)
+        elif ext == 'txt':
+            content = file.stream.read().decode('utf-8')
+        
+        if not content or not content.strip():
+            return jsonify({"status": "error", "message": "Gagal mengekstrak teks atau file kosong."}), 500
+
+        source_name = f"manual-file-{filename}"
+        add_manual_data(source_name=source_name, title=final_title, content=content)
+        return jsonify({"status": "success", "message": f"Konten dari file '{filename}' berhasil ditambahkan."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -110,9 +137,9 @@ def save_memory_handler():
         question = data.get('question')
         answer = data.get('answer')
         if not question or not answer:
-            return jsonify({"status": "error", "message": "Question and answer are required."}), 400
+            return jsonify({"status": "error", "message": "Pertanyaan dan jawaban harus diisi."}), 400
         add_to_memory(question, answer)
-        return jsonify({"status": "success", "message": "Conversation saved to memory."})
+        return jsonify({"status": "success", "message": "Percakapan berhasil disimpan ke memori."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -130,104 +157,94 @@ def chat_handler():
             continue
     return jsonify({"response": final_answer})
 
-# --- AKHIR DARI BAGIAN YANG TIDAK DIUBAH ---
-
-
 @app.route('/api/admin_chat', methods=['POST'])
 def admin_chat_handler():
-    """Endpoint untuk panel admin yang melakukan streaming proses berpikir."""
     data = request.json
     user_query = data.get('query', '')
     history = data.get('history', [])
     return Response(stream_with_context(generate_response_stream(user_query, history)), mimetype='application/x-ndjson')
 
-
 def generate_response_stream(user_query, history):
-    """Generator baru untuk streaming JSON ke admin panel."""
     for thought in generate_response(user_query, history):
         yield json.dumps(thought) + '\n'
 
-
 def generate_response(user_query, history):
-    """Fungsi utama yang berisi logika AI, dengan pemisahan konteks untuk prioritas."""
     if not user_query:
-        yield {"step": "error", "data": "Query is required"}
+        yield {"step": "error", "data": "Query tidak boleh kosong."}
         return
         
     yield {"step": "start", "data": f"Menerima pertanyaan: '{user_query}'"}
 
-    # Langkah 1: Pencarian Terintegrasi
-    retriever = get_retriever()
-    memory_context = ""
-    scraped_context = ""
+    retriever_memory, retriever_manual, retriever_scraped = get_retrievers()
     
-    if retriever:
-        yield {"step": "retrieval", "data": "Mencari dokumen relevan dari seluruh basis data pengetahuan (termasuk Memory Bank)..."}
+    memory_context = ""
+    manual_context = ""
+    scraped_context = ""
+    all_retrieved_docs_info = []
+
+    # TAHAP 1: Cari di Memory Bank
+    yield {"step": "memory_search", "data": "Mencari di Memory Bank..."}
+    if retriever_memory:
         try:
-            docs = retriever.invoke(user_query)
-            
-            doc_data = []
-            memory_docs_content = []
-            scraped_docs_content = []
-
-            for doc in docs:
-                source_type = doc.metadata.get('type', 'Data')
-                source_info = doc.metadata.get('source', 'N/A')
-                doc_label = f"[{source_type}] {source_info}"
-                doc_data.append({"source": doc_label, "content": doc.page_content[:150] + "..."})
-                
-                if source_type == 'Memory Bank':
-                    memory_docs_content.append(doc.page_content)
-                else:
-                    scraped_docs_content.append(doc.page_content)
-
-            if not doc_data:
-                yield {"step": "warning", "data": "Tidak ada dokumen relevan yang ditemukan di seluruh basis data."}
+            docs = retriever_memory.invoke(user_query)
+            if docs:
+                memory_context = "\n---\n".join([doc.page_content for doc in docs])
+                yield {"step": "memory_found", "data": f"{len(docs)} dokumen relevan ditemukan di Memory Bank."}
+                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
             else:
-                yield {"step": "retrieved_docs", "data": doc_data}
-
-            memory_context = "\n---\n".join(memory_docs_content)
-            scraped_context = "\n---\n".join(scraped_docs_content)
-
+                yield {"step": "memory_not_found", "data": "Tidak ada yang cocok di Memory Bank."}
         except Exception as e:
-            yield {"step": "error", "data": f"Error saat mengambil dokumen: {e}"}
+            yield {"step": "error", "data": f"Error saat mencari di Memory Bank: {e}"}
     else:
-        yield {"step": "warning", "data": "Retriever tidak tersedia. Tidak dapat melakukan pencarian."}
+        yield {"step": "warning", "data": "Indeks Memory Bank tidak ditemukan."}
 
-    # Langkah 2: Pemisahan Konteks (Eksplisit untuk Log)
-    yield {"step": "context_separation", "data": "Memisahkan konteks untuk prioritas..."}
-    if memory_context:
-        yield {"step": "memory_context_found", "data": "Konteks dari Memory Bank ditemukan dan akan diprioritaskan."}
-    if scraped_context:
-        yield {"step": "scraped_context_found", "data": "Konteks dari data scraping/manual ditemukan."}
-
-    # Langkah 3: Agent Pemroses Data (Hanya untuk data scraping)
-    refined_scraped_context = ""
-    if scraped_context.strip():
-        yield {"step": "refining", "data": "Agen Pemroses Data sedang mensintesis konteks dari data scraping/manual..."}
+    # TAHAP 2: Cari di Data Manual 
+    yield {"step": "manual_search", "data": "Mencari di Data Manual..."}
+    if retriever_manual:
         try:
-            refiner_prompt = f"Ringkas dan sintesis teks mentah berikut menjadi satu paragraf yang relevan untuk menjawab pertanyaan '{user_query}'. Teks Mentah:\n---\n{scraped_context}\n---\nRingkasan Relevan:"
-            refiner_response = model.generate_content(refiner_prompt)
-            refined_scraped_context = refiner_response.text
-            yield {"step": "refined_context", "data": refined_scraped_context}
+            docs = retriever_manual.invoke(user_query)
+            if docs:
+                manual_context = "\n---\n".join([doc.page_content for doc in docs])
+                yield {"step": "manual_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Manual."}
+                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
+            else:
+                yield {"step": "manual_not_found", "data": "Tidak ada yang cocok di Data Manual."}
         except Exception as e:
-            yield {"step": "warning", "data": f"Gagal memurnikan konteks scraping, menggunakan data mentah. Error: {e}"}
-            refined_scraped_context = scraped_context
+            yield {"step": "error", "data": f"Error saat mencari di Data Manual: {e}"}
     else:
-        yield {"step": "info", "data": "Tidak ada konteks dari data scraping untuk diproses."}
+        yield {"step": "warning", "data": "Indeks Data Manual tidak ditemukan."}
 
-    # Menggabungkan semua konteks untuk prompt final
+    # TAHAP 3: Cari di Data Scraping
+    yield {"step": "scrape_search", "data": "Mencari di Data Scraping..."}
+    if retriever_scraped:
+        try:
+            docs = retriever_scraped.invoke(user_query)
+            if docs:
+                scraped_context = "\n---\n".join([doc.page_content for doc in docs])
+                yield {"step": "scrape_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Scraping."}
+                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
+            else:
+                yield {"step": "scrape_not_found", "data": "Tidak ada yang cocok di Data Scraping."}
+        except Exception as e:
+            yield {"step": "error", "data": f"Error saat mencari di Data Scraping: {e}"}
+    else:
+        yield {"step": "warning", "data": "Indeks Data Scraping tidak ditemukan."}
+    
+    if all_retrieved_docs_info:
+        yield {"step": "retrieved_docs", "data": all_retrieved_docs_info}
+
     final_verified_information = ""
     if memory_context:
-        final_verified_information += f"--- Informasi Pasti dari Memory Bank (Prioritas Tertinggi) ---\n{memory_context}\n\n"
-    if refined_scraped_context:
-        final_verified_information += f"--- Informasi Tambahan dari Dokumen (Scraping/Manual) ---\n{refined_scraped_context}"
+        final_verified_information += f"--- Informasi dari Memory Bank (Gunakan Ini Sebagai Jawaban Utama) ---\n{memory_context}\n\n"
+    if manual_context:
+        final_verified_information += f"--- Informasi Tambahan dari Data Manual (Prioritas Kedua) ---\n{manual_context}\n\n"
+    if scraped_context:
+        final_verified_information += f"--- Informasi Tambahan dari Website (Prioritas Terendah) ---\n{scraped_context}"
 
     if not final_verified_information.strip():
-         yield {"step": "warning", "data": "Tidak ada informasi terverifikasi yang dapat digunakan untuk menyusun jawaban."}
+         yield {"step": "warning", "data": "Tidak ada informasi relevan yang dapat ditemukan untuk menyusun jawaban."}
 
-    # Langkah 4: Agent Persona Staf
-    yield {"step": "final_prompt", "data": "Agen Persona Staf sedang menyusun jawaban akhir dengan kesadaran konteks..."}
+    yield {"step": "final_prompt", "data": "Menyusun jawaban akhir berdasarkan informasi yang ditemukan..."}
     try:
         final_prompt_text = f"""
         ### PROMPT UTAMA UNTUK AI ###
@@ -257,7 +274,7 @@ def generate_response(user_query, history):
         ---
         # DATA YANG HARUS ANDA OLAH
         
-        ## Informasi yang Telah Diverifikasi
+        ## Informasi yang Telah Diverifikasi (Dengan Urutan Prioritas)
         {final_verified_information}
         
         ## Riwayat Percakapan Sebelumnya
@@ -278,17 +295,21 @@ def generate_response(user_query, history):
         yield {"step": "error", "data": f"Gagal menghasilkan jawaban akhir. Error: {e}"}
 
 
-# --- Bagian ini berisi sisa endpoint API yang sudah ada dan tidak diubah ---
 @app.route('/api/delete_faiss', methods=['POST'])
 def delete_faiss_handler():
     try:
-        path = 'db/faiss_index'
-        if os.path.exists(path):
-            shutil.rmtree(path)
+        paths = [FAISS_MEMORY_PATH, FAISS_MANUAL_PATH, FAISS_SCRAPED_PATH]
+        deleted_count = 0
+        for path in paths:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+                deleted_count += 1
+        
+        if deleted_count > 0:
             os.makedirs("db", exist_ok=True)
-            return jsonify({"status": "success", "message": "Direktori FAISS index berhasil dihapus."})
+            return jsonify({"status": "success", "message": f"Berhasil menghapus {deleted_count} direktori indeks FAISS."})
         else:
-            return jsonify({"status": "info", "message": "FAISS index tidak ditemukan."})
+            return jsonify({"status": "info", "message": "Tidak ada direktori indeks FAISS yang ditemukan untuk dihapus."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -313,32 +334,72 @@ def scrape_handler():
         for result in scrape_from_file(urls_file):
             if result['status'] == 'success':
                 add_scraped_data(result['url'], result['title'], result['content'], result.get('image_url'))
-                yield f"SUCCESS: {result['url']} - {result['title']}\n"
-            elif result['status'] == 'info':
-                yield f"INFO: {result['message']}\n"
+                yield f"BERHASIL: {result['url']} - {result['title']}\n"
             else:
-                yield f"SKIPPED/ERROR: {result['url']} - {result['reason']}\n"
+                yield f"DILEWATI/ERROR: {result['url']} - {result['reason']}\n"
     return Response(stream_with_context(generate_logs()), mimetype='text/plain')
 
 @app.route('/api/reindex', methods=['POST'])
 def reindex_handler():
     return Response(stream_with_context(create_vector_db()), mimetype='text/plain')
 
-@app.route('/api/get-scraped-data', methods=['GET'])
+@app.route('/api/get-data', methods=['GET'])
 def get_data_handler():
-    data = get_all_scraped_data()
-    return jsonify(data)
+    scraped = get_all_scraped_data()
+    manual = get_all_manual_data()
+    memory = get_all_memory_data()
 
-@app.route('/api/data/<int:item_id>', methods=['PUT'])
-def update_data_handler(item_id):
-    data = request.json
-    update_data(item_id, data.get('title'), data.get('content'))
-    return jsonify({"status": "success"})
+    all_data = []
+    for item in scraped:
+        item['type'] = 'Scrap'
+        item['timestamp'] = item['scraped_at']
+        all_data.append(item)
+        
+    for item in manual:
+        item['type'] = 'Manual'
+        item['timestamp'] = item['added_at']
+        item['url'] = item['source_name']
+        all_data.append(item)
 
-@app.route('/api/data/<int:item_id>', methods=['DELETE'])
-def delete_data_handler(item_id):
-    delete_data(item_id)
-    return jsonify({"status": "success"})
+    for item in memory:
+        item['type'] = 'Memory'
+        item['timestamp'] = item['saved_at']
+        item['title'] = item['question']
+        item['content'] = item['answer']
+        item['url'] = f"Memory Bank #{item['id']}"
+        all_data.append(item)
+
+    all_data_sorted = sorted(all_data, key=lambda x: x['timestamp'], reverse=True)
+    return jsonify(all_data_sorted)
+
+@app.route('/api/data/<string:type>/<int:item_id>', methods=['PUT', 'DELETE'])
+def update_delete_data_handler(type, item_id):
+    try:
+        if request.method == 'PUT':
+            data = request.json
+            if type == 'Scrap':
+                update_scraped_data(item_id, data.get('title'), data.get('content'))
+            elif type == 'Manual':
+                update_manual_data(item_id, data.get('title'), data.get('content'))
+            elif type == 'Memory':
+                update_memory_data(item_id, data.get('title'), data.get('content'))
+            else:
+                return jsonify({"status": "error", "message": "Tipe data tidak valid."}), 400
+            return jsonify({"status": "success", "message": "Data berhasil diperbarui."})
+
+        elif request.method == 'DELETE':
+            if type == 'Scrap':
+                delete_scraped_data(item_id)
+            elif type == 'Manual':
+                delete_manual_data(item_id)
+            elif type == 'Memory':
+                delete_memory_data(item_id)
+            else:
+                return jsonify({"status": "error", "message": "Tipe data tidak valid."}), 400
+            return jsonify({"status": "success", "message": "Data berhasil dihapus."})
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/')
 def serve_index():

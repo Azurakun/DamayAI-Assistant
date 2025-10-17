@@ -15,6 +15,10 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        .filter-btn.active {
+            background-color: #4f46e5;
+            color: white;
+        }
         .bug-filter-btn.active {
             background-color: #4f46e5;
             color: white;
@@ -37,7 +41,7 @@
         <p class="text-sm text-gray-500 mb-6">PENTING: Setelah menambah/mengubah data, selalu klik 'Rebuild FAISS Index' agar AI terupdate.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div class="bg-gray-800 p-6 rounded-lg">
+            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-1">
                 <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
                     <h2 class="text-lg font-semibold text-gray-300">Kontrol Data</h2>
                     <button id="tutorial-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-sm rounded">Buka Tutorial</button>
@@ -47,7 +51,7 @@
                 <div class="space-y-3">
                     <button id="scrape-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">1. Scrape URLs dari File</button>
                     <button id="reindex-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">2. Rebuild FAISS Index</button>
-                    <button id="view-data-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg">Lihat/Ubah Data Scraped</button>
+                    <button id="view-data-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg">Lihat/Ubah Data Bank</button>
                     <button id="view-bugs-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg">Lihat Laporan Bug</button>
                 </div>
 
@@ -58,51 +62,67 @@
                 </div>
             </div>
 
-            <div class="bg-gray-800 p-6 rounded-lg">
-                <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Tambah Data Manual</h2>
-                <form id="manual-add-form" class="space-y-4">
-                    <div>
-                        <label for="manual-title" class="block text-sm font-medium text-gray-400 mb-1">Judul (Opsional)</label>
-                        <input type="text" id="manual-title" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Jadwal PPDB 2024">
-                    </div>
-                    <div>
-                        <label for="manual-content" class="block text-sm font-medium text-gray-400 mb-1">Konten Teks (Opsional)</label>
-                        <textarea id="manual-content" name="content" rows="5" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik atau tempel konten teks di sini..."></textarea>
-                    </div>
-                    <div>
-                         <label for="manual-file" class="block text-sm font-medium text-gray-400 mb-1">Upload File (Opsional)</label>
-                         <label class="w-full flex items-center justify-center px-4 py-2 bg-gray-700 text-gray-300 rounded-lg cursor-pointer hover:bg-gray-600 border border-gray-600">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            <span id="file-upload-filename">Pilih File (.pdf, .docx, .pptx)</span>
-                            <input type="file" id="manual-file" name="file" class="hidden" accept=".pdf,.docx,.pptx">
-                        </label>
-                    </div>
-                    <button type="submit" id="manual-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Tambah Data & Pengetahuan</button>
-                </form>
-            </div>
+            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Tambah Konteks Teks Manual</h2>
+                    <form id="manual-text-form" class="space-y-4">
+                        <div>
+                            <label for="manual-title-text" class="block text-sm font-medium text-gray-400 mb-1">Judul (Opsional)</label>
+                            <input type="text" id="manual-title-text" name="title" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Jadwal PPDB 2024">
+                        </div>
+                        <div>
+                            <label for="manual-content" class="block text-sm font-medium text-gray-400 mb-1">Konten Teks</label>
+                            <textarea id="manual-content" name="content" rows="8" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik atau tempel konten teks di sini..." required></textarea>
+                        </div>
+                        <button type="submit" id="manual-text-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Tambah Konteks Teks</button>
+                    </form>
+                </div>
 
-            <div class="bg-gray-800 p-6 rounded-lg">
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Tambah Konteks File</h2>
+                    <form id="manual-file-form" class="space-y-4">
+                        <div>
+                            <label for="manual-title-file" class="block text-sm font-medium text-gray-400 mb-1">Judul (Opsional, jika kosong akan memakai nama file)</label>
+                            <input type="text" id="manual-title-file" name="title" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Panduan Seleksi">
+                        </div>
+                        <div>
+                             <label for="manual-file" class="block text-sm font-medium text-gray-400 mb-1">Upload File</label>
+                             <label class="w-full flex items-center justify-center px-4 py-6 bg-gray-700 text-gray-300 rounded-lg cursor-pointer hover:bg-gray-600 border-2 border-dashed border-gray-600">
+                                <div class="text-center">
+                                    <svg class="w-10 h-10 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                    <span id="file-upload-filename" class="mt-2 block text-sm">Pilih File (.pdf, .docx, .pptx)</span>
+                                </div>
+                                <input type="file" id="manual-file" name="file" class="hidden" accept=".pdf,.docx,.pptx" required>
+                            </label>
+                        </div>
+                        <button type="submit" id="manual-file-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Tambah Konteks File</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-1">
                  <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Status Sistem</h2>
                  <p class="text-gray-400">Status Proses: <span id="status" class="font-semibold text-yellow-400">Idle</span></p>
                  <div id="console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar mt-4">
                     <p class="text-gray-500">> Menunggu perintah...</p>
                  </div>
             </div>
-        </div>
-
-        <div class="mt-8 mb-8">
-            <h2 class="text-xl font-semibold mb-4 text-gray-300">Uji Coba AI & Proses Berpikir Real-time</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gray-800 p-6 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-300 mb-4">Ajukan Pertanyaan</h3>
-                    <form id="admin-chat-form">
-                        <textarea id="admin-chat-input" rows="4" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik pertanyaan Anda di sini untuk melihat proses berpikir AI..."></textarea>
-                        <button type="submit" id="admin-chat-submit" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Kirim & Analisis</button>
-                    </form>
-                </div>
-                <div>
-                    <div id="thinking-console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar">
-                        <p class="text-gray-500">> Menunggu pertanyaan untuk dianalisis...</p>
+            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-2">
+                <h2 class="text-xl font-semibold mb-4 text-gray-300">Uji Coba AI & Proses Berpikir Real-time</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-300 mb-4">Ajukan Pertanyaan</h3>
+                        <form id="admin-chat-form">
+                            <textarea id="admin-chat-input" rows="4" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik pertanyaan Anda di sini untuk melihat proses berpikir AI..."></textarea>
+                            <button type="submit" id="admin-chat-submit" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Kirim & Analisis</button>
+                        </form>
+                    </div>
+                    <div>
+                        <div id="thinking-console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar">
+                            <p class="text-gray-500">> Menunggu pertanyaan untuk dianalisis...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -125,19 +145,20 @@
         <div class="bg-gray-800 text-white rounded-lg shadow-xl w-11/12 max-w-4xl h-5/6 flex flex-col">
             <div class="p-4 border-b border-gray-700">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 id="modal-title" class="text-xl font-bold">Data</h2>
+                    <h2 id="modal-title" class="text-xl font-bold">Data Bank</h2>
                     <button id="close-modal-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                 </div>
-                <div id="search-container" class="hidden">
+                <div id="data-filter-container" class="hidden flex flex-wrap gap-2">
+                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600 active" data-filter="Semua">Semua</button>
+                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Scrap">Scrap</button>
+                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Manual">Manual</button>
+                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Memory">Memory</button>
+                </div>
+                <div id="search-container" class="hidden mt-4">
                     <input type="search" id="search-data-input" placeholder="Cari berdasarkan judul atau konten..." class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div id="bug-filter-container" class="hidden flex flex-wrap gap-2">
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Semua">Semua</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Baru">Baru</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Sedang Diproses">Sedang Diproses</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Selesai">Selesai</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Tidak Akan Diperbaiki">Tidak Akan Diperbaiki</button>
-                </div>
+                <div id="bug-filter-container" class="hidden flex flex-wrap gap-2 mt-4">
+                    </div>
             </div>
             <div id="modal-content-list" class="p-6 overflow-y-auto custom-scrollbar"></div>
             <div id="modal-content-edit" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
