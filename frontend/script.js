@@ -118,39 +118,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatAIResponse(message) {
         let formattedMessage = message;
 
-        // 1. Escape basic HTML characters to prevent injection
+        // Escape HTML entities first to prevent accidental rendering of raw tags
         formattedMessage = formattedMessage.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        // 2. Convert custom formatting tags to HTML with Tailwind classes
-        // [TITLE]Judul[/TITLE] -> <h3 class="...">Judul</h3>
+        // Apply custom tags
         formattedMessage = formattedMessage.replace(/\[TITLE\](.*?)\[\/TITLE\]/g, '<h3 class="text-lg font-semibold mb-2 mt-4">$1</h3>');
-        
-        // [B]Teks Tebal[/B] -> <strong>Teks Tebal</strong>
         formattedMessage = formattedMessage.replace(/\[B\](.*?)\[\/B\]/g, '<strong class="font-bold">$1</strong>');
+        
+        // ========================================================================
+        // --- FUNGSI DIPERBAIKI ---
+        // ========================================================================
+        // Handle images: Ensure aspect ratio and make them clickable for full view
+        formattedMessage = formattedMessage.replace(/\[IMAGE:\s*(.*?)\s*\]/g, (match, imageUrl) => {
+            return `<a href="${imageUrl}" target="_blank" rel="noopener noreferrer" class="block w-full max-w-md mx-auto my-3 overflow-hidden rounded-lg shadow-md">
+                        <img src="${imageUrl}" alt="Gambar" class="w-full h-auto object-contain">
+                    </a>`;
+        });
+        // ========================================================================
+        // --- AKHIR DARI FUNGSI YANG DIPERBAIKI ---
+        // ========================================================================
 
-        // 3. Process lists (this regex handles contiguous list items)
+        // Process lists (numbered and bulleted)
         const processLists = (text) => {
-            // Process numbered lists (e.g., 1. item, 2. item)
             let processedText = text.replace(/((?:\n|^)\s*\d+\..+)+/g, (match) => {
                 const items = match.trim().split('\n').map(item => `<li class="mb-1">${item.replace(/^\s*\d+\.\s*/, '')}</li>`).join('');
                 return `<ol class="list-decimal list-inside space-y-1 my-3 pl-2">${items}</ol>`;
             });
-            // Process bulleted lists (e.g., - item)
             processedText = processedText.replace(/((?:\n|^)\s*-.+)+/g, (match) => {
                 const items = match.trim().split('\n').map(item => `<li class="mb-1">${item.replace(/^\s*-\s*/, '')}</li>`).join('');
                 return `<ul class="list-disc list-inside space-y-1 my-3 pl-2">${items}</ul>`;
             });
             return processedText;
         };
-        
         formattedMessage = processLists(formattedMessage);
         
-        // 4. Convert remaining newlines to <br> tags, ensuring not to break list structure
+        // Convert remaining newlines to <br>
         formattedMessage = formattedMessage.replace(/\n/g, '<br>');
 
-        // 5. Clean up extra <br> tags around lists/titles that might be created
-        formattedMessage = formattedMessage.replace(/<br>\s*(<(?:ul|ol|h3))/g, '$1');
-        formattedMessage = formattedMessage.replace(/(<\/(?:ul|ol|h3)>)\s*<br>/g, '$1');
+        // Cleanup: remove <br> tags immediately before/after block-level elements
+        formattedMessage = formattedMessage.replace(/<br>\s*(<(?:ul|ol|h3|img|a\s+href))/g, '$1');
+        formattedMessage = formattedMessage.replace(/(<\/(?:ul|ol|h3|a)>)\s*<br>/g, '$1');
         
         return formattedMessage;
     }
@@ -158,17 +165,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(message, sender, isError = false) {
         const messageWrapper = document.createElement('div');
         messageWrapper.className = `flex items-end gap-3 chat-bubble ${sender === 'user' ? 'justify-end' : ''}`;
-        // Ambil teks bersih SEBELUM diformat untuk TTS dan Salin
-        const cleanMessageForActions = message.replace(/\[IMAGE:.*?\]/g, '').trim();
+        
+        
+        const cleanMessageForActions = message;
 
         if (sender === 'user') {
             messageWrapper.innerHTML = `
                 <div class="message-content user-bubble">
-                    <p class="font-medium">${cleanMessageForActions}</p>
+                    <p class="font-medium">${cleanMessageForActions.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
                 </div>
                 <div class="avatar-user"><i class="fas fa-user"></i></div>
             `;
-        } else { // AI message
+        } else { 
             const formattedMessage = formatAIResponse(cleanMessageForActions);
             const errorClass = isError ? 'bg-red-100 text-red-800 border border-red-200' : 'ai-bubble';
             
@@ -188,8 +196,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.appendChild(messageWrapper);
         scrollToBottom();
         
-        // Teks yang bersih (tanpa tag format) digunakan untuk TTS dan Salin
-        const cleanTextForSpeechAndCopy = cleanMessageForActions.replace(/\[TITLE\]/g, '').replace(/\[\/TITLE\]/g, '\n').replace(/\[B\]/g, '').replace(/\[\/B\]/g, '');
+        // The text for speech and copy should be the raw AI response, but stripped of custom tags
+        const cleanTextForSpeechAndCopy = cleanMessageForActions
+            .replace(/\[TITLE\](.*?)\[\/TITLE\]/g, '$1\n')
+            .replace(/\[B\](.*?)\[\/B\]/g, '$1')
+            .replace(/\[IMAGE:.*?\]/g, '') // Remove image tags entirely for speech/copy
+            .trim();
         
         const ttsButton = messageWrapper.querySelector('.tts-btn');
         if (ttsButton) ttsButton.addEventListener('click', (e) => toggleSpeech(cleanTextForSpeechAndCopy, e.currentTarget));
@@ -256,7 +268,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'model') {
             chatHistory.pop();
-            chatContainer.lastChild.remove();
+            
+            const allBubbles = chatContainer.querySelectorAll('.chat-bubble');
+            if (allBubbles.length > 0) {
+                allBubbles[allBubbles.length - 1].remove();
+            }
         }
         
         toggleInput(true);
