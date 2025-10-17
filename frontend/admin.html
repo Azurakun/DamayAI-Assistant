@@ -158,7 +158,12 @@
                     <input type="search" id="search-data-input" placeholder="Cari berdasarkan judul atau konten..." class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div id="bug-filter-container" class="hidden flex flex-wrap gap-2 mt-4">
-                    </div>
+                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600 active" data-filter="Semua">Semua</button>
+                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Baru">Baru</button>
+                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Sedang Diproses">Sedang Diproses</button>
+                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Selesai">Selesai</button>
+                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Tidak Akan Diperbaiki">Tidak Akan Diperbaiki</button>
+                </div>
             </div>
             <div id="modal-content-list" class="p-6 overflow-y-auto custom-scrollbar"></div>
             <div id="modal-content-edit" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
