@@ -2,7 +2,7 @@ import os
 import shutil
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from database import get_memory_documents_for_indexing, get_manual_documents_for_indexing, get_scraped_documents_for_indexing
 
 # --- Konfigurasi Path untuk Tiga Indeks Terpisah ---
