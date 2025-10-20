@@ -157,27 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- MANAJEMEN DATA BANK ---
 
-    // ========================================================================
-    // --- FUNGSI DIPERBAIKI ---
-    // ========================================================================
     async function fetchDataAndDisplay() {
         try {
             const response = await fetch('/api/get-data');
             if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
             currentDataCache = await response.json();
             
-            // Perbaikan: Langsung panggil displayData dan atur status UI
-            displayData(currentDataCache);
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector('.filter-btn[data-filter="Semua"]').classList.add('active');
+            displayData(currentDataCache);
             
         } catch (error) {
             modalContentList.innerHTML = `<p class="text-red-400">Gagal memuat data: ${error.message}</p>`;
         }
     }
-    // ========================================================================
-    // --- AKHIR DARI FUNGSI YANG DIPERBAIKI ---
-    // ========================================================================
 
     dataFilterContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('filter-btn')) {
@@ -320,7 +313,53 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`Gagal menyimpan data: ${error.message}`);
         }
     }
-    
+
+    function markdownToHtml(md) {
+        if (!md) return '';
+        const lines = md.split('\n');
+        let html = '';
+        let inTable = false;
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
+                const cells = trimmedLine.slice(1, -1).split('|').map(c => c.trim());
+                if (!inTable) {
+                    html += '<table class="w-full my-4 text-left border-collapse border border-gray-600 table-fixed">';
+                    html += '<thead class="bg-gray-700"><tr>';
+                    cells.forEach(header => {
+                        html += `<th class="p-2 border border-gray-600 break-words">${header}</th>`;
+                    });
+                    html += '</tr></thead><tbody>';
+                    inTable = true;
+                } else if (cells.every(c => /^--+$/.test(c))) {
+                    // This is the separator line, skip it
+                    continue;
+                } else {
+                    html += '<tr>';
+                    cells.forEach(cell => {
+                        html += `<td class="p-2 border border-gray-600 break-words">${cell}</td>`;
+                    });
+                    html += '</tr>';
+                }
+            } else {
+                if (inTable) {
+                    html += '</tbody></table>';
+                    inTable = false;
+                }
+                if (trimmedLine) {
+                    html += `<p class="my-2">${trimmedLine.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+                }
+            }
+        }
+
+        if (inTable) {
+            html += '</tbody></table>';
+        }
+
+        return html;
+    }
+
     function showDetailView(id, type) {
         const item = currentDataCache.find(d => d.id == id && d.type === type);
         if (!item) return;
@@ -328,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showModalView('data-detail');
         modalTitle.textContent = `Detail Data #${id} (${type})`;
 
-        const safeContent = (item.content || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const renderedContent = markdownToHtml(item.content);
         const titleLabel = type === 'Memory' ? 'Pertanyaan' : 'Judul';
         const contentLabel = type === 'Memory' ? 'Jawaban' : 'Konten';
         
@@ -347,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${imageHtml}
                 <div class="border-t border-gray-700 pt-4">
                      <p class="text-sm text-gray-400">${contentLabel}</p>
-                    <div class="text-gray-300 whitespace-pre-wrap text-base">${safeContent}</div>
+                    <div class="text-gray-300 text-base">${renderedContent}</div>
                 </div>
                 <div class="flex justify-end pt-4">
                     <button id="back-to-list-btn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">Kembali ke Daftar</button>

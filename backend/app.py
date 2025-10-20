@@ -4,7 +4,7 @@ import shutil
 import google.generativeai as genai
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from dotenv import load_dotenv
-from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_docx, extract_text_from_pptx
+from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_pptx
 from vector_store import create_vector_db, get_retrievers
 from database import (
     init_db, add_scraped_data, get_all_scraped_data, update_scraped_data, delete_scraped_data,
@@ -13,6 +13,8 @@ from database import (
     add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report
 )
 from werkzeug.utils import secure_filename
+import docx
+from io import BytesIO
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -37,6 +39,32 @@ def allowed_file(filename):
 
 def allowed_bug_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_BUG_EXTENSIONS
+
+def extract_text_from_docx(file_stream):
+    """Extracts text and tables from a DOCX file stream, converting tables to Markdown."""
+    try:
+        stream_buffer = BytesIO(file_stream.read())
+        document = docx.Document(stream_buffer)
+        
+        content_parts = []
+        for element in document.element.body:
+            if element.tag.endswith('p'):
+                content_parts.append(docx.text.paragraph.Paragraph(element, document).text)
+            elif element.tag.endswith('tbl'):
+                table = docx.table.Table(element, document)
+                header = [cell.text.replace('\n', ' ').strip() for cell in table.rows[0].cells]
+                md_table = f"\n| {' | '.join(header)} |\n"
+                md_table += f"| {' | '.join(['---'] * len(header))} |\n"
+                for row in table.rows[1:]:
+                    row_data = [cell.text.replace('\n', ' ').strip() for cell in row.cells]
+                    md_table += f"| {' | '.join(row_data)} |\n"
+                content_parts.append(md_table)
+        
+        return "\n".join(content_parts)
+    except Exception:
+        file_stream.seek(0) 
+        document = docx.Document(file_stream)
+        return "\n".join([p.text for p in document.paragraphs])
 
 @app.route('/api/report_bug', methods=['POST'])
 def report_bug_handler():
@@ -251,7 +279,7 @@ def generate_response(user_query, history):
 
         # Persona Inti Anda
         Anda adalah DamayAI, asisten digital resmi dari SMKN 2 Indramayu.
-        - **Sapaan ke Pengguna**: Selalu panggil pengguna dengan sapaan "Kak".
+        - **Sapaan ke Pengguna**: Selalu panggil pengguna dengan sapaan "Adik Panca", "Dik Panca".
         - **Gaya Bicara**: Gunakan bahasa Indonesia yang semi-formal, ramah, sopan, jelas, dan mudah dipahami. Hindari bahasa yang terlalu kaku atau teknis, namun tetap profesional. Tunjukkan semangat untuk membantu.
         - **Larangan**: Anda TIDAK PERNAH berspekulasi, memberikan opini pribadi, atau mengarang informasi.
 
