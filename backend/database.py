@@ -1,230 +1,221 @@
-import sqlite3
+import os
+import datetime
+from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo.errors import DuplicateKeyError
+from bson import ObjectId
 from langchain_core.documents import Document
+from dotenv import load_dotenv
 
-DATABASE_NAME = 'scraped_data.db'
+load_dotenv()
+
+# Configuration
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "damayai_db")
+
+client = None
+db = None
+
+def get_db():
+    global client, db
+    if db is None:
+        if not MONGO_URI:
+            raise ValueError("MONGO_URI is not set in .env file")
+        client = MongoClient(MONGO_URI)
+        db = client[DB_NAME]
+    return db
 
 def init_db():
-    """Menginisialisasi database dan membuat atau memperbarui semua tabel yang diperlukan."""
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
+    """Initializes MongoDB indexes to ensure uniqueness and query performance."""
+    database = get_db()
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS scraped_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT UNIQUE,
-            title TEXT,
-            content TEXT,
-            image_url TEXT,
-            scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    # Collection: scraped_data
+    # Constraint: url must be unique
+    database.scraped_data.create_index([("url", ASCENDING)], unique=True)
+    database.scraped_data.create_index([("scraped_at", DESCENDING)])
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS manual_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source_name TEXT UNIQUE,
-            title TEXT,
-            content TEXT,
-            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    # Collection: manual_data
+    # Constraint: source_name must be unique
+    database.manual_data.create_index([("source_name", ASCENDING)], unique=True)
+    database.manual_data.create_index([("added_at", DESCENDING)])
+
+    # Collection: memory_bank
+    # Constraint: question must be unique
+    database.memory_bank.create_index([("question", ASCENDING)], unique=True)
+    database.memory_bank.create_index([("saved_at", DESCENDING)])
+
+    # Collection: bug_reports
+    database.bug_reports.create_index([("reported_at", DESCENDING)])
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS memory_bank (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question TEXT UNIQUE,
-            answer TEXT,
-            saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS bug_reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            description TEXT NOT NULL,
-            file_path TEXT,
-            status TEXT NOT NULL DEFAULT 'Baru',
-            reported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    print(f"MongoDB initialized. Connected to database: {DB_NAME}")
 
-    try:
-        cursor.execute("PRAGMA table_info(bug_reports)")
-        columns = [column[1] for column in cursor.fetchall()]
-        if 'status' not in columns:
-            cursor.execute("ALTER TABLE bug_reports ADD COLUMN status TEXT NOT NULL DEFAULT 'Baru'")
-    except sqlite3.OperationalError:
-        pass
+def _format_doc(doc):
+    """Helper to convert ObjectId to string and format dates."""
+    if not doc:
+        return None
+    doc['id'] = str(doc['_id'])
+    del doc['_id']
+    return doc
 
-    conn.commit()
-    conn.close()
+# --- CRUD FUNCTION: MANUAL DATA ---
 
-# --- FUNGSI CRUD DATA MANUAL ---
 def add_manual_data(source_name, title, content):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT OR REPLACE INTO manual_data (source_name, title, content)
-        VALUES (?, ?, ?)
-    ''', (source_name, title, content))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    data = {
+        "source_name": source_name,
+        "title": title,
+        "content": content,
+        "added_at": datetime.datetime.utcnow()
+    }
+    try:
+        database.manual_data.replace_one(
+            {"source_name": source_name}, 
+            data, 
+            upsert=True
+        )
+    except Exception as e:
+        print(f"Error adding manual data: {e}")
 
 def get_all_manual_data():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, source_name, title, content, added_at FROM manual_data ORDER BY added_at DESC')
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    database = get_db()
+    cursor = database.manual_data.find().sort("added_at", DESCENDING)
+    return [_format_doc(doc) for doc in cursor]
 
 def update_manual_data(item_id, title, content):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE manual_data SET title = ?, content = ? WHERE id = ?', (title, content, item_id))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.manual_data.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"title": title, "content": content}}
+    )
 
 def delete_manual_data(item_id):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM manual_data WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.manual_data.delete_one({"_id": ObjectId(item_id)})
 
 def get_manual_documents_for_indexing():
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
+    database = get_db()
     documents = []
-    cursor.execute('SELECT source_name, title, content FROM manual_data')
-    rows = cursor.fetchall()
-    for row in rows:
-        source_name, title, content = row
-        page_content = f"Judul Informasi Manual: {title}\n\nKonten:\n{content}"
-        metadata = {"source": source_name, "title": title, "type": "Data Manual"}
+    cursor = database.manual_data.find()
+    for doc in cursor:
+        page_content = f"Judul Informasi Manual: {doc['title']}\n\nKonten:\n{doc['content']}"
+        metadata = {"source": doc['source_name'], "title": doc['title'], "type": "Data Manual"}
         documents.append(Document(page_content=page_content, metadata=metadata))
-    conn.close()
     return documents
 
-# --- FUNGSI CRUD MEMORY BANK ---
+# --- CRUD FUNCTION: MEMORY BANK ---
+
 def add_to_memory(question, answer):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR REPLACE INTO memory_bank (question, answer) VALUES (?, ?)', (question, answer))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    data = {
+        "question": question,
+        "answer": answer,
+        "saved_at": datetime.datetime.utcnow()
+    }
+    try:
+        database.memory_bank.replace_one(
+            {"question": question},
+            data,
+            upsert=True
+        )
+    except Exception as e:
+        print(f"Error adding to memory: {e}")
 
 def get_all_memory_data():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, question, answer, saved_at FROM memory_bank ORDER BY saved_at DESC')
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    database = get_db()
+    cursor = database.memory_bank.find().sort("saved_at", DESCENDING)
+    return [_format_doc(doc) for doc in cursor]
 
 def update_memory_data(item_id, question, answer):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE memory_bank SET question = ?, answer = ? WHERE id = ?', (question, answer, item_id))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.memory_bank.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"question": question, "answer": answer}}
+    )
 
 def delete_memory_data(item_id):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM memory_bank WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.memory_bank.delete_one({"_id": ObjectId(item_id)})
 
 def get_memory_documents_for_indexing():
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
+    database = get_db()
     documents = []
-    cursor.execute('SELECT question, answer FROM memory_bank')
-    rows = cursor.fetchall()
-    for row in rows:
-        question, answer = row
-        page_content = f"Pertanyaan: {question}\nJawaban Pasti: {answer}"
-        metadata = {"source": f"Memory Bank: {question[:50]}...", "title": question, "type": "Memory Bank"}
+    cursor = database.memory_bank.find()
+    for doc in cursor:
+        page_content = f"Pertanyaan: {doc['question']}\nJawaban Pasti: {doc['answer']}"
+        metadata = {"source": f"Memory Bank: {doc['question'][:50]}...", "title": doc['question'], "type": "Memory Bank"}
         documents.append(Document(page_content=page_content, metadata=metadata))
-    conn.close()
     return documents
 
-# --- FUNGSI CRUD DATA SCRAPING ---
+# --- CRUD FUNCTION: SCRAPED DATA ---
+
 def add_scraped_data(url, title, content, image_url):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('INSERT OR REPLACE INTO scraped_data (url, title, content, image_url) VALUES (?, ?, ?, ?)', (url, title, content, image_url))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    data = {
+        "url": url,
+        "title": title,
+        "content": content,
+        "image_url": image_url,
+        "scraped_at": datetime.datetime.utcnow()
+    }
+    try:
+        database.scraped_data.replace_one(
+            {"url": url},
+            data,
+            upsert=True
+        )
+    except Exception as e:
+        print(f"Error adding scraped data: {e}")
 
 def get_all_scraped_data():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, url, title, content, image_url, scraped_at FROM scraped_data ORDER BY scraped_at DESC')
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    database = get_db()
+    cursor = database.scraped_data.find().sort("scraped_at", DESCENDING)
+    return [_format_doc(doc) for doc in cursor]
 
 def update_scraped_data(item_id, title, content):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE scraped_data SET title = ?, content = ? WHERE id = ?', (title, content, item_id))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.scraped_data.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"title": title, "content": content}}
+    )
 
 def delete_scraped_data(item_id):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM scraped_data WHERE id = ?', (item_id,))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.scraped_data.delete_one({"_id": ObjectId(item_id)})
 
 def get_scraped_documents_for_indexing():
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
+    database = get_db()
     documents = []
-    cursor.execute('SELECT url, title, content, image_url FROM scraped_data')
-    rows = cursor.fetchall()
-    for row in rows:
-        url, title, content, image_url = row
-        image_info = f"URL Gambar Terkait: {image_url}" if image_url else "Tidak ada gambar terkait."
-        page_content = f"Judul Halaman: {title}\nURL: {url}\n{image_info}\n\nKonten:\n{content}"
-        metadata = {"source": url, "title": title, "type": "Data Scrap"}
+    cursor = database.scraped_data.find()
+    for doc in cursor:
+        image_info = f"URL Gambar Terkait: {doc.get('image_url')}" if doc.get('image_url') else "Tidak ada gambar terkait."
+        page_content = f"Judul Halaman: {doc['title']}\nURL: {doc['url']}\n{image_info}\n\nKonten:\n{doc['content']}"
+        metadata = {"source": doc['url'], "title": doc['title'], "type": "Data Scrap"}
         documents.append(Document(page_content=page_content, metadata=metadata))
-    conn.close()
     return documents
 
-# --- FUNGSI LAPORAN BUG (TIDAK BERUBAH) ---
+# --- CRUD FUNCTION: BUG REPORTS ---
+
 def add_bug_report(description, file_path):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO bug_reports (description, file_path) VALUES (?, ?)', (description, file_path))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    data = {
+        "description": description,
+        "file_path": file_path,
+        "status": "Baru",
+        "reported_at": datetime.datetime.utcnow()
+    }
+    database.bug_reports.insert_one(data)
 
 def get_all_bug_reports():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, description, file_path, status, reported_at FROM bug_reports ORDER BY reported_at DESC')
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    database = get_db()
+    cursor = database.bug_reports.find().sort("reported_at", DESCENDING)
+    return [_format_doc(doc) for doc in cursor]
 
 def update_bug_report_status(report_id, status):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE bug_reports SET status = ? WHERE id = ?', (status, report_id))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.bug_reports.update_one(
+        {"_id": ObjectId(report_id)},
+        {"$set": {"status": status}}
+    )
 
 def delete_bug_report(report_id):
-    conn = sqlite3.connect(DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM bug_reports WHERE id = ?', (report_id,))
-    conn.commit()
-    conn.close()
+    database = get_db()
+    database.bug_reports.delete_one({"_id": ObjectId(report_id)})

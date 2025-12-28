@@ -10,19 +10,27 @@ from database import (
     init_db, add_scraped_data, get_all_scraped_data, update_scraped_data, delete_scraped_data,
     add_to_memory, get_all_memory_data, update_memory_data, delete_memory_data,
     add_manual_data, get_all_manual_data, update_manual_data, delete_manual_data,
-    add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report
+    add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report,
+    get_db 
 )
 from werkzeug.utils import secure_filename
 import docx
 from io import BytesIO
+import datetime
 
+# Load env variables
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 os.makedirs(os.path.join(UPLOADS_DIR, 'bugs'), exist_ok=True)
 os.makedirs("db", exist_ok=True)
-init_db()
+
+# Initialize MongoDB
+try:
+    init_db()
+except Exception as e:
+    print(f"Failed to initialize database: {e}")
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/')
 model = genai.GenerativeModel(model_name="gemini-2.5-flash")
@@ -90,7 +98,7 @@ def get_bug_reports_handler():
     reports = get_all_bug_reports()
     return jsonify(reports)
 
-@app.route('/api/bug_reports/<int:report_id>/status', methods=['PUT'])
+@app.route('/api/bug_reports/<string:report_id>/status', methods=['PUT'])
 def update_bug_status_handler(report_id):
     try:
         data = request.json
@@ -102,14 +110,13 @@ def update_bug_status_handler(report_id):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/bug_reports/<int:report_id>', methods=['DELETE'])
+@app.route('/api/bug_reports/<string:report_id>', methods=['DELETE'])
 def delete_bug_handler(report_id):
     try:
         delete_bug_report(report_id)
         return jsonify({"status": "success", "message": f"Bug report {report_id} deleted."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 @app.route('/api/add_manual_text', methods=['POST'])
 def add_manual_text_handler():
@@ -205,10 +212,7 @@ def generate_response(user_query, history):
 
     retriever_memory, retriever_manual, retriever_scraped = get_retrievers()
     
-    memory_context = ""
-    manual_context = ""
-    scraped_context = ""
-    all_retrieved_docs_info = []
+    retrieved_knowledge = []
 
     # TAHAP 1: Cari di Memory Bank
     yield {"step": "memory_search", "data": "Mencari di Memory Bank..."}
@@ -216,15 +220,18 @@ def generate_response(user_query, history):
         try:
             docs = retriever_memory.invoke(user_query)
             if docs:
-                memory_context = "\n---\n".join([doc.page_content for doc in docs])
                 yield {"step": "memory_found", "data": f"{len(docs)} dokumen relevan ditemukan di Memory Bank."}
-                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
+                for doc in docs:
+                    retrieved_knowledge.append({
+                        "source_type": "Memory Bank",
+                        "title": doc.metadata.get('title', 'Unknown'),
+                        "source": "Memory Bank", 
+                        "content": doc.page_content
+                    })
             else:
                 yield {"step": "memory_not_found", "data": "Tidak ada yang cocok di Memory Bank."}
         except Exception as e:
             yield {"step": "error", "data": f"Error saat mencari di Memory Bank: {e}"}
-    else:
-        yield {"step": "warning", "data": "Indeks Memory Bank tidak ditemukan."}
 
     # TAHAP 2: Cari di Data Manual 
     yield {"step": "manual_search", "data": "Mencari di Data Manual..."}
@@ -232,15 +239,18 @@ def generate_response(user_query, history):
         try:
             docs = retriever_manual.invoke(user_query)
             if docs:
-                manual_context = "\n---\n".join([doc.page_content for doc in docs])
                 yield {"step": "manual_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Manual."}
-                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
+                for doc in docs:
+                     retrieved_knowledge.append({
+                        "source_type": "Data Manual",
+                        "title": doc.metadata.get('title', 'Unknown'),
+                        "source": doc.metadata.get('source', 'Manual Upload'),
+                        "content": doc.page_content
+                    })
             else:
                 yield {"step": "manual_not_found", "data": "Tidak ada yang cocok di Data Manual."}
         except Exception as e:
             yield {"step": "error", "data": f"Error saat mencari di Data Manual: {e}"}
-    else:
-        yield {"step": "warning", "data": "Indeks Data Manual tidak ditemukan."}
 
     # TAHAP 3: Cari di Data Scraping
     yield {"step": "scrape_search", "data": "Mencari di Data Scraping..."}
@@ -248,71 +258,70 @@ def generate_response(user_query, history):
         try:
             docs = retriever_scraped.invoke(user_query)
             if docs:
-                scraped_context = "\n---\n".join([doc.page_content for doc in docs])
                 yield {"step": "scrape_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Scraping."}
-                all_retrieved_docs_info.extend([{"source": f"[{doc.metadata.get('type')}]", "content": doc.page_content[:150] + "..."} for doc in docs])
+                for doc in docs:
+                     retrieved_knowledge.append({
+                        "source_type": "Website Scraping",
+                        "title": doc.metadata.get('title', 'Website'),
+                        "source": doc.metadata.get('source', '#'),
+                        "content": doc.page_content
+                    })
             else:
                 yield {"step": "scrape_not_found", "data": "Tidak ada yang cocok di Data Scraping."}
         except Exception as e:
             yield {"step": "error", "data": f"Error saat mencari di Data Scraping: {e}"}
-    else:
-        yield {"step": "warning", "data": "Indeks Data Scraping tidak ditemukan."}
     
-    if all_retrieved_docs_info:
-        yield {"step": "retrieved_docs", "data": all_retrieved_docs_info}
+    if retrieved_knowledge:
+        debug_info = [{"source": f"[{item['source_type']}] {item['title']}", "content": item['content'][:100]+"..."} for item in retrieved_knowledge]
+        yield {"step": "retrieved_docs", "data": debug_info}
 
-    final_verified_information = ""
-    if memory_context:
-        final_verified_information += f"--- Informasi dari Memory Bank (Gunakan Ini Sebagai Jawaban Utama) ---\n{memory_context}\n\n"
-    if manual_context:
-        final_verified_information += f"--- Informasi Tambahan dari Data Manual (Prioritas Kedua) ---\n{manual_context}\n\n"
-    if scraped_context:
-        final_verified_information += f"--- Informasi Tambahan dari Website (Prioritas Terendah) ---\n{scraped_context}"
+    context_str = ""
+    for i, item in enumerate(retrieved_knowledge):
+        context_str += f"""
+        --- DOCUMENT #{i+1} ---
+        [Tipe]: {item['source_type']}
+        [Judul]: {item['title']}
+        [Source/URL]: {item['source']}
+        [Konten]:
+        {item['content']}
+        -----------------------
+        """
 
-    if not final_verified_information.strip():
-         yield {"step": "warning", "data": "Tidak ada informasi relevan yang dapat ditemukan untuk menyusun jawaban."}
-
-    yield {"step": "final_prompt", "data": "Menyusun jawaban akhir berdasarkan informasi yang ditemukan..."}
+    yield {"step": "final_prompt", "data": "Menyusun jawaban akhir..."}
     try:
         final_prompt_text = f"""
-        ### PROMPT UTAMA UNTUK AI ###
+        ### SYSTEM PROMPT (DamayAI) ###
 
-        # Persona Inti Anda
-        Anda adalah DamayAI, asisten digital resmi dari SMKN 2 Indramayu.
-        - **Sapaan ke Pengguna**: Selalu panggil pengguna dengan sapaan "Adik Panca", "Dik Panca".
-        - **Gaya Bicara**: Gunakan bahasa Indonesia yang semi-formal, ramah, sopan, jelas, dan mudah dipahami. Hindari bahasa yang terlalu kaku atau teknis, namun tetap profesional. Tunjukkan semangat untuk membantu.
-        - **Larangan**: Anda TIDAK PERNAH berspekulasi, memberikan opini pribadi, atau mengarang informasi.
+        # Identitas & Gaya Bicara
+        Anda adalah DamayAI, asisten digital SMKN 2 Indramayu.
+        - **Human-like**: Bicaralah secara luwes, natural, dan sopan seperti manusia (Adik Panca/Dik Panca).
+        - **Fleksibel**: Anda BOLEH mengobrol santai (small talk) tanpa data database jika pengguna hanya menyapa atau bertanya kabar.
+        - **Grounding Wajib**: JIKA pengguna bertanya tentang fakta, info sekolah, atau data teknis, Anda WAJIB menggunakan "DATA PENDUKUNG" di bawah.
+        - **Jujur**: Jika data tidak ada di context, katakan belum tahu, tapi tetaplah ramah.
 
-        # Struktur dan Formatting Jawaban Anda
-        Untuk memastikan jawaban Anda komprehensif dan mudah dibaca, Anda HARUS menggunakan tag khusus berikut untuk formatting. JANGAN gunakan Markdown (`*`, `**`, `#`, `==`).
-        1.  **Pembukaan Ramah**: Mulailah selalu dengan sapaan pembuka yang singkat dan ramah.
-        2.  **Judul**: Gunakan tag `[TITLE]Judul Bagian[/TITLE]` untuk membuat judul.
-        3.  **Teks Tebal**: Gunakan tag `[B]Teks yang ingin ditebalkan[/B]` untuk membuat teks menjadi tebal.
-        4.  **Poin Bernomor**: Mulai setiap item dengan angka diikuti titik (`1.`, `2.`, `3.`). Letakkan setiap item di baris baru.
-        5.  **Poin Simbol**: Mulai setiap item dengan tanda hubung (`-`). Letakkan setiap item di baris baru.
-        6.  **Paragraf Pendek**: Pecah penjelasan yang panjang menjadi beberapa paragraf pendek dengan memisahkannya menggunakan baris baru.
-        7.  **Penutup yang Membantu**: Akhiri jawaban Anda dengan kalimat penutup yang sopan dan menawarkan bantuan lebih lanjut.
+        # Aturan Sitasi (PENTING!)
+        Agar pengguna bisa melihat sumber data, ikuti aturan ini saat mengambil fakta dari "DATA PENDUKUNG":
+        1. Ambil informasi dari dokumen.
+        2. Di akhir kalimat/paragraf yang relevan, tambahkan tag sitasi khusus ini:
+           `[CITE: Source/URL | Judul Dokumen]`
+        3. Contoh: "Pendaftaran dibuka bulan Mei [CITE: https://smkn2-im.sch.id/daftar | Info PPDB]."
+        4. JANGAN membuat link Markdown sendiri `[Judul](URL)`, gunakan format `[CITE:...]` saja. Frontend yang akan mengubahnya menjadi tombol (chip).
 
-        # Aturan Pengolahan Informasi
-        1.  **Prioritas Informasi**: Informasi dari "Memory Bank" adalah fakta utama dan paling akurat. Integrasikan informasi ini sebagai inti jawaban Anda. Gunakan "Informasi Tambahan dari Dokumen" untuk memberikan detail, konteks, atau penjelasan yang lebih lengkap.
-        2.  **Kejujuran**: Jika informasi yang ditanyakan tidak ada dalam konteks yang diberikan, sampaikan dengan jujur dan sopan. Contoh: "Mohon maaf Kak, untuk informasi spesifik mengenai hal tersebut saat ini belum saya ketahui."
-        3.  **Penggunaan Gambar**: Anda BOLEH menyertakan tag `[IMAGE: url_gambar_disini]`.
-        4.  **Sumber Informasi**: JANGAN PERNAH mengatakan frasa seperti "berdasarkan informasi yang saya terima", "menurut konteks", atau "berdasarkan dokumen". Sampaikan informasi seolah-olah Anda sudah mengetahuinya sebagai asisten resmi sekolah.
+        # Format Jawaban
+        1. Gunakan **Markdown** (Bold `**`, Italic `*`, List `-`, Tabel `|...|`).
+        2. Buat jawaban ringkas, padat, dan mudah dibaca (poin-poin sangat disarankan).
+        3. Sertakan `[IMAGE: url]` jika ada gambar di data pendukung.
 
         ---
-        # DATA YANG HARUS ANDA OLAH
+        # DATA PENDUKUNG (Gunakan ini untuk fakta)
+        {context_str if context_str else "Tidak ada data spesifik ditemukan. Gunakan pengetahuan umum hanya untuk sapaan/obrolan ringan."}
         
-        ## Informasi yang Telah Diverifikasi (Dengan Urutan Prioritas)
-        {final_verified_information}
-        
-        ## Riwayat Percakapan Sebelumnya
-        {history}
-        
-        ## Pertanyaan Terbaru dari Pengguna
-        "{user_query}"
+        # PERCAKAPAN
+        Riwayat: {history}
+        User Query: "{user_query}"
         ---
         
-        Jawaban Anda (sebagai DamayAI, ikuti SEMUA aturan formatting dengan tag `[TITLE]` dan `[B]`):
+        Jawaban (Ingat tag [CITE:...] jika menggunakan data):
         """
         
         chat_session = model.start_chat(history=history)
@@ -344,13 +353,12 @@ def delete_faiss_handler():
 @app.route('/api/delete_db', methods=['POST'])
 def delete_db_handler():
     try:
-        path = 'scraped_data.db'
-        if os.path.exists(path):
-            os.remove(path)
-            init_db()
-            return jsonify({"status": "success", "message": "File database berhasil dihapus dan dibuat ulang."})
-        else:
-            return jsonify({"status": "info", "message": "File database tidak ditemukan."})
+        db_to_drop = get_db()
+        db_to_drop.scraped_data.drop()
+        db_to_drop.manual_data.drop()
+        db_to_drop.memory_bank.drop()
+        init_db()
+        return jsonify({"status": "success", "message": "Semua koleksi database berhasil dikosongkan."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -380,27 +388,27 @@ def get_data_handler():
     all_data = []
     for item in scraped:
         item['type'] = 'Scrap'
-        item['timestamp'] = item['scraped_at']
+        item['timestamp'] = item.get('scraped_at')
         all_data.append(item)
         
     for item in manual:
         item['type'] = 'Manual'
-        item['timestamp'] = item['added_at']
-        item['url'] = item['source_name']
+        item['timestamp'] = item.get('added_at')
+        item['url'] = item.get('source_name')
         all_data.append(item)
 
     for item in memory:
         item['type'] = 'Memory'
-        item['timestamp'] = item['saved_at']
-        item['title'] = item['question']
-        item['content'] = item['answer']
-        item['url'] = f"Memory Bank #{item['id']}"
+        item['timestamp'] = item.get('saved_at')
+        item['title'] = item.get('question')
+        item['content'] = item.get('answer')
+        item['url'] = f"Memory Bank #{item.get('id')}"
         all_data.append(item)
 
-    all_data_sorted = sorted(all_data, key=lambda x: x['timestamp'], reverse=True)
+    all_data_sorted = sorted(all_data, key=lambda x: x.get('timestamp') or datetime.datetime.min, reverse=True)
     return jsonify(all_data_sorted)
 
-@app.route('/api/data/<string:type>/<int:item_id>', methods=['PUT', 'DELETE'])
+@app.route('/api/data/<string:type>/<string:item_id>', methods=['PUT', 'DELETE'])
 def update_delete_data_handler(type, item_id):
     try:
         if request.method == 'PUT':
@@ -446,4 +454,7 @@ def serve_static(path):
     return send_from_directory('../frontend', path)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Railway assigns a PORT env variable
+    port = int(os.environ.get("PORT", 5000))
+    # Host must be 0.0.0.0 to be accessible externally
+    app.run(host='0.0.0.0', port=port)
