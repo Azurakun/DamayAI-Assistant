@@ -2,10 +2,11 @@ import os
 import json
 import shutil
 import google.generativeai as genai
-from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory, session
+from functools import wraps
 from dotenv import load_dotenv
 from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_pptx
-from vector_store import create_vector_db, get_retrievers
+from vector_store import create_vector_db, get_retrievers, invalidate_cache
 from database import (
     init_db, add_scraped_data, get_all_scraped_data, update_scraped_data, delete_scraped_data,
     add_to_memory, get_all_memory_data, update_memory_data, delete_memory_data,
@@ -33,6 +34,7 @@ except Exception as e:
     print(f"Failed to initialize database: {e}")
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/')
+app.secret_key = os.getenv("SECRET_KEY", "fallback-secret-key-please-set-env")
 model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
 FAISS_MEMORY_PATH = "db/faiss_index_memory"
@@ -41,6 +43,55 @@ FAISS_SCRAPED_PATH = "db/faiss_index_scraped"
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'pptx'}
 ALLOWED_BUG_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'avi'}
+
+# --- FIX #2: Auto-reindex on startup if FAISS indexes are missing ---
+def _check_and_auto_reindex():
+    """If any FAISS index is missing, rebuild them automatically at startup."""
+    indexes_missing = not all([
+        os.path.exists(FAISS_MEMORY_PATH),
+        os.path.exists(FAISS_MANUAL_PATH),
+        os.path.exists(FAISS_SCRAPED_PATH),
+    ])
+    if indexes_missing:
+        print("WARNING: One or more FAISS indexes are missing. Auto-rebuilding...")
+        try:
+            for log_line in create_vector_db():
+                print(log_line, end='')
+            print("Auto-reindex complete.")
+        except Exception as e:
+            print(f"Auto-reindex failed (will retry on next restart): {e}")
+
+_check_and_auto_reindex()
+
+# --- FIX #1: Server-side admin authentication ---
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+def require_admin(f):
+    """Decorator: rejects requests that don't have a valid admin session."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("is_admin"):
+            return jsonify({"status": "error", "message": "Unauthorized. Please log in."}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    data = request.json
+    password = data.get('password', '')
+    if not ADMIN_PASSWORD:
+        return jsonify({"status": "error", "message": "ADMIN_PASSWORD not configured on server."}), 500
+    if password == ADMIN_PASSWORD:
+        session['is_admin'] = True
+        return jsonify({"status": "success", "message": "Login berhasil."})
+    return jsonify({"status": "error", "message": "Kata sandi salah."}), 401
+
+@app.route('/api/admin/logout', methods=['POST'])
+def admin_logout():
+    session.pop('is_admin', None)
+    return jsonify({"status": "success", "message": "Logged out."})
+
+# --- HELPER FUNCTIONS ---
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -74,6 +125,8 @@ def extract_text_from_docx(file_stream):
         document = docx.Document(file_stream)
         return "\n".join([p.text for p in document.paragraphs])
 
+# --- PUBLIC ROUTES ---
+
 @app.route('/api/report_bug', methods=['POST'])
 def report_bug_handler():
     try:
@@ -93,12 +146,32 @@ def report_bug_handler():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/chat', methods=['POST'])
+def chat_handler():
+    data = request.json
+    user_query = data.get('query', '')
+    history = data.get('history', [])
+    # FIX #3 (backend guard): Truncate history to last 20 entries
+    history = history[-20:]
+    final_answer = "Maaf, terjadi kesalahan saat memproses permintaan Anda."
+    for thought in generate_response(user_query, history):
+        try:
+            if thought.get('step') == 'final_answer':
+                final_answer = thought.get('data', final_answer)
+        except AttributeError:
+            continue
+    return jsonify({"response": final_answer})
+
+# --- ADMIN-ONLY ROUTES ---
+
 @app.route('/api/get_bug_reports', methods=['GET'])
+@require_admin
 def get_bug_reports_handler():
     reports = get_all_bug_reports()
     return jsonify(reports)
 
 @app.route('/api/bug_reports/<string:report_id>/status', methods=['PUT'])
+@require_admin
 def update_bug_status_handler(report_id):
     try:
         data = request.json
@@ -111,6 +184,7 @@ def update_bug_status_handler(report_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/bug_reports/<string:report_id>', methods=['DELETE'])
+@require_admin
 def delete_bug_handler(report_id):
     try:
         delete_bug_report(report_id)
@@ -119,6 +193,7 @@ def delete_bug_handler(report_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/add_manual_text', methods=['POST'])
+@require_admin
 def add_manual_text_handler():
     try:
         data = request.json
@@ -134,6 +209,7 @@ def add_manual_text_handler():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/add_manual_file', methods=['POST'])
+@require_admin
 def add_manual_file_handler():
     try:
         title = request.form.get('title', '')
@@ -166,6 +242,7 @@ def add_manual_file_handler():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/save_memory', methods=['POST'])
+@require_admin
 def save_memory_handler():
     try:
         data = request.json
@@ -178,25 +255,14 @@ def save_memory_handler():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/chat', methods=['POST'])
-def chat_handler():
-    data = request.json
-    user_query = data.get('query', '')
-    history = data.get('history', [])
-    final_answer = "Maaf, terjadi kesalahan saat memproses permintaan Anda."
-    for thought in generate_response(user_query, history):
-        try:
-            if thought.get('step') == 'final_answer':
-                final_answer = thought.get('data', final_answer)
-        except AttributeError:
-            continue
-    return jsonify({"response": final_answer})
-
 @app.route('/api/admin_chat', methods=['POST'])
+@require_admin
 def admin_chat_handler():
     data = request.json
     user_query = data.get('query', '')
     history = data.get('history', [])
+    # FIX #3 (backend guard): Truncate history to last 20 entries
+    history = history[-20:]
     return Response(stream_with_context(generate_response_stream(user_query, history)), mimetype='application/x-ndjson')
 
 def generate_response_stream(user_query, history):
@@ -333,6 +399,7 @@ def generate_response(user_query, history):
 
 
 @app.route('/api/delete_faiss', methods=['POST'])
+@require_admin
 def delete_faiss_handler():
     try:
         paths = [FAISS_MEMORY_PATH, FAISS_MANUAL_PATH, FAISS_SCRAPED_PATH]
@@ -341,6 +408,9 @@ def delete_faiss_handler():
             if os.path.exists(path):
                 shutil.rmtree(path)
                 deleted_count += 1
+        
+        # FIX #4: Invalidate FAISS retriever cache after deletion
+        invalidate_cache()
         
         if deleted_count > 0:
             os.makedirs("db", exist_ok=True)
@@ -351,6 +421,7 @@ def delete_faiss_handler():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/delete_db', methods=['POST'])
+@require_admin
 def delete_db_handler():
     try:
         db_to_drop = get_db()
@@ -363,23 +434,33 @@ def delete_db_handler():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/scrape', methods=['POST'])
+@require_admin
 def scrape_handler():
     def generate_logs():
         urls_file = 'urls_to_scrape.txt'
         yield f"Membaca file '{urls_file}'...\n"
         for result in scrape_from_file(urls_file):
-            if result['status'] == 'success':
+            status = result.get('status')
+            if status == 'info':
+                yield f"INFO: {result.get('message', '')}\n"
+            elif status == 'success':
                 add_scraped_data(result['url'], result['title'], result['content'], result.get('image_url'))
                 yield f"BERHASIL: {result['url']} - {result['title']}\n"
             else:
-                yield f"DILEWATI/ERROR: {result['url']} - {result['reason']}\n"
+                yield f"DILEWATI/ERROR: {result.get('url', '?')} - {result.get('reason', '')}\n"
     return Response(stream_with_context(generate_logs()), mimetype='text/plain')
 
 @app.route('/api/reindex', methods=['POST'])
+@require_admin
 def reindex_handler():
-    return Response(stream_with_context(create_vector_db()), mimetype='text/plain')
+    def _reindex_and_invalidate():
+        yield from create_vector_db()
+        # FIX #4: Invalidate cache so next chat loads fresh indexes
+        invalidate_cache()
+    return Response(stream_with_context(_reindex_and_invalidate()), mimetype='text/plain')
 
 @app.route('/api/get-data', methods=['GET'])
+@require_admin
 def get_data_handler():
     scraped = get_all_scraped_data()
     manual = get_all_manual_data()
@@ -409,6 +490,7 @@ def get_data_handler():
     return jsonify(all_data_sorted)
 
 @app.route('/api/data/<string:type>/<string:item_id>', methods=['PUT', 'DELETE'])
+@require_admin
 def update_delete_data_handler(type, item_id):
     try:
         if request.method == 'PUT':

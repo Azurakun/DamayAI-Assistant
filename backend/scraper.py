@@ -48,7 +48,9 @@ def extract_text_from_pptx(file_stream):
 
 def extract_single_page(url):
     """
-    Extracts content and ALL relevant image URLs from a single page.
+    Extracts content and the single best thumbnail image URL from a page.
+    FIX #5: Stores only ONE image_url (og:image preferred, else first in-content image).
+    This prevents comma-joined multi-URL strings from breaking img src attributes.
     """
     try:
         response = requests.get(url, headers=HEADERS, timeout=15)
@@ -59,29 +61,23 @@ def extract_single_page(url):
         content = trafilatura.extract(html_content, include_comments=False, include_tables=True)
         title = trafilatura.extract_metadata(html_content).title
         
-        # Logika baru untuk mengambil BANYAK gambar
-        image_urls = set() # Menggunakan set untuk menghindari duplikat
         soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Prioritas 1: Ambil og:image sebagai gambar utama/thumbnail
+        primary_image_url = None
+
+        # Priority 1: og:image — best thumbnail/representative image
         og_image = soup.find('meta', property='og:image')
         if og_image and og_image.get('content'):
-            # Pastikan URL absolut
-            image_urls.add(urljoin(url, og_image['content']))
+            primary_image_url = urljoin(url, og_image['content'])
 
-        # Prioritas 2: Cari semua gambar di dalam konten utama yang diekstrak trafilatura
-        if content:
+        # Priority 2: First <img> inside the extracted content body
+        if not primary_image_url and content:
             content_soup = BeautifulSoup(content, 'html.parser')
-            for img_tag in content_soup.find_all('img'):
-                if img_tag.get('src'):
-                    # Pastikan URL absolut
-                    image_urls.add(urljoin(url, img_tag['src']))
-        
-        # Gabungkan semua URL gambar menjadi satu string, dipisahkan koma
-        all_images_str = ",".join(list(image_urls))
+            first_img = content_soup.find('img')
+            if first_img and first_img.get('src'):
+                primary_image_url = urljoin(url, first_img['src'])
 
         if content:
-            return {"status": "success", "url": url, "title": title, "content": content, "image_url": all_images_str}
+            return {"status": "success", "url": url, "title": title, "content": content, "image_url": primary_image_url}
         else:
             return {"status": "skipped", "url": url, "reason": "No main content found", "image_url": None}
 

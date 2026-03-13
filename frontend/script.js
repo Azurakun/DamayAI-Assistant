@@ -60,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: userMessage, history: chatHistory }),
+                // FIX #3: Truncate history to last 20 entries to prevent token overflow
+                body: JSON.stringify({ query: userMessage, history: chatHistory.slice(-20) }),
             });
 
             if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
@@ -141,9 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
         formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>');
         formattedMessage = formattedMessage.replace(/\*(.*?)\*/g, '<em class="italic text-gray-700">$1</em>');
 
+        // FIX #6: Sanitize image URL — only allow http/https to prevent XSS via javascript: or data: URIs
         formattedMessage = formattedMessage.replace(/\[IMAGE:\s*(.*?)\s*\]/g, (match, imageUrl) => {
-            return `<a href="${imageUrl}" target="_blank" rel="noopener noreferrer" class="block w-full max-w-md mx-auto my-3 overflow-hidden rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
-                        <img src="${imageUrl}" alt="Gambar Referensi" class="w-full h-auto object-contain bg-gray-50">
+            const trimmedUrl = imageUrl.trim();
+            if (!/^https?:\/\//i.test(trimmedUrl)) return ''; // Reject non-http(s) URLs
+            return `<a href="${trimmedUrl}" target="_blank" rel="noopener noreferrer" class="block w-full max-w-md mx-auto my-3 overflow-hidden rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
+                        <img src="${trimmedUrl}" alt="Gambar Referensi" class="w-full h-auto object-contain bg-gray-50">
                     </a>`;
         });
 
@@ -344,7 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: lastUserMessage, history: chatHistory }),
+                // FIX #3: Truncate history to last 20 entries
+                body: JSON.stringify({ query: lastUserMessage, history: chatHistory.slice(-20) }),
             });
             if (!response.ok) throw new Error('Server error');
             const data = await response.json();

@@ -1,7 +1,6 @@
 # --- Daftar URL untuk di-scrape ---
 # Letakkan setiap URL di baris baru.
 # Baris yang diawali dengan tanda # akan diabaikan.
-# Anda bisa menambahkan URL artikel, pengumuman, atau halaman profil di sini.
 
 # Text-only:
 https://smkn2indramayu.sch.id/

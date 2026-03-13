@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBugReportsCache = [];
     let adminChatHistory = [];
     let tutorialContentLoaded = false;
-    const ADMIN_CODE = '355123';
+    // FIX #1: Admin code is no longer stored client-side. Auth is verified server-side via session.
 
     // --- FUNGSI UTAMA ---
 
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleDiv.innerHTML = `<p class="text-yellow-400">> Memulai proses ${processName}...</p>`;
 
         try {
-            const response = await fetch(endpoint, { method: 'POST' });
+            const response = await apiFetch(endpoint, { method: 'POST' });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const reader = response.body.getReader();
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function performAction(endpoint, message) {
         alert(message);
         try {
-            const response = await fetch(endpoint, { method: 'POST' });
+            const response = await apiFetch(endpoint, { method: 'POST' });
             const result = await response.json();
             if (result.status === 'error') throw new Error(result.message);
             alert(`Berhasil: ${result.message}`);
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchDataAndDisplay() {
         try {
-            const response = await fetch('/api/get-data');
+            const response = await apiFetch('/api/get-data');
             if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
             currentDataCache = await response.json();
             
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function deleteDataItem(id, type) {
         try {
-            const response = await fetch(`/api/data/${type}/${id}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/data/${type}/${id}`, { method: 'DELETE' });
             const result = await response.json();
             if (result.status === 'success') {
                 alert('Data berhasil dihapus. Jangan lupa Rebuild Index!');
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTitle = document.getElementById('edit-title').value;
         const newContent = document.getElementById('edit-content').value;
         try {
-            const response = await fetch(`/api/data/${type}/${id}`, {
+            const response = await apiFetch(`/api/data/${type}/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newTitle, content: newContent })
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchBugsAndDisplay() {
         try {
-            const response = await fetch('/api/get_bug_reports');
+            const response = await apiFetch('/api/get_bug_reports');
             if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
             currentBugReportsCache = await response.json();
             const allFilterButton = document.querySelector('.bug-filter-btn[data-filter="Semua"]');
@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateBugStatus(id, status) {
         try {
-            const response = await fetch(`/api/bug_reports/${id}/status`, {
+            const response = await apiFetch(`/api/bug_reports/${id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: status })
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function deleteBugReport(id) {
         try {
-            const response = await fetch(`/api/bug_reports/${id}`, { method: 'DELETE' });
+            const response = await apiFetch(`/api/bug_reports/${id}`, { method: 'DELETE' });
             const result = await response.json();
             if (result.status !== 'success') throw new Error(result.message);
             currentBugReportsCache = currentBugReportsCache.filter(r => r.id != id);
@@ -570,14 +570,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT LISTENERS ---
 
-    adminCodeInput.addEventListener('keyup', (e) => {
-        if (e.target.value === ADMIN_CODE) {
-            authOverlay.classList.add('hidden');
-            adminPanel.classList.remove('hidden');
-        } else if (e.target.value.length >= ADMIN_CODE.length) {
-             errorMsg.textContent = 'Kode salah.'
+    // FIX #1: Auth via server-side session — send password to /api/admin/login
+    async function tryLogin() {
+        const password = adminCodeInput.value;
+        if (!password) return;
+        errorMsg.textContent = '';
+        try {
+            const response = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            const result = await response.json();
+            if (response.ok && result.status === 'success') {
+                authOverlay.classList.add('hidden');
+                adminPanel.classList.remove('hidden');
+            } else {
+                errorMsg.textContent = result.message || 'Kata sandi salah.';
+                adminCodeInput.value = '';
+            }
+        } catch (err) {
+            errorMsg.textContent = 'Gagal menghubungi server.';
         }
+    }
+
+    adminCodeInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') tryLogin();
+        else errorMsg.textContent = '';
     });
+
+    // FIX #1: Global 401 handler — if session expires, show login overlay again
+    async function apiFetch(url, options = {}) {
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            authOverlay.classList.remove('hidden');
+            adminPanel.classList.add('hidden');
+            errorMsg.textContent = 'Sesi berakhir. Silakan login kembali.';
+            adminCodeInput.value = '';
+            throw new Error('Unauthorized');
+        }
+        return response;
+    }
 
     scrapeBtn.addEventListener('click', () => runProcess('/api/scrape', 'Scraping'));
     reindexBtn.addEventListener('click', () => runProcess('/api/reindex', 'Indexing'));
@@ -641,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
         manualTextSubmitBtn.disabled = true;
         manualTextSubmitBtn.textContent = 'Menambahkan...';
         try {
-            const response = await fetch('/api/add_manual_text', {
+            const response = await apiFetch('/api/add_manual_text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, content }),
@@ -671,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         manualFileSubmitBtn.disabled = true;
         manualFileSubmitBtn.textContent = 'Mengunggah...';
         try {
-            const response = await fetch('/api/add_manual_file', {
+            const response = await apiFetch('/api/add_manual_file', {
                 method: 'POST',
                 body: formData,
             });
@@ -702,10 +735,11 @@ document.addEventListener('DOMContentLoaded', () => {
         adminChatSubmit.textContent = 'Menganalisis...';
         thinkingConsole.dataset.question = userQuery;
         try {
-            const response = await fetch('/api/admin_chat', {
+            const response = await apiFetch('/api/admin_chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: userQuery, history: adminChatHistory }),
+                // FIX #3: Truncate history to last 20 entries to prevent token overflow
+                body: JSON.stringify({ query: userQuery, history: adminChatHistory.slice(-20) }),
             });
             if (!response.body) throw new Error('Response body is null.');
             const reader = response.body.getReader();
@@ -757,7 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 target.textContent = 'Menyimpan...';
                 target.disabled = true;
                 try {
-                    const response = await fetch('/api/save_memory', {
+                    const response = await apiFetch('/api/save_memory', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ question, answer })

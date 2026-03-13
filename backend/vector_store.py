@@ -11,6 +11,15 @@ FAISS_MANUAL_PATH = "db/faiss_index_manual"
 FAISS_SCRAPED_PATH = "db/faiss_index_scraped"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# --- FIX #4: Module-level cache so retrievers are loaded once, not per-request ---
+_cached_retrievers = None
+
+def invalidate_cache():
+    """Call this after reindexing or deleting FAISS indexes to force a reload."""
+    global _cached_retrievers
+    _cached_retrievers = None
+
+
 def _create_specific_index(documents, index_path, data_name, embeddings):
     """Fungsi helper untuk membuat satu indeks spesifik."""
     if os.path.exists(index_path):
@@ -38,6 +47,7 @@ def _create_specific_index(documents, index_path, data_name, embeddings):
 
 def create_vector_db():
     """Membuat atau memperbarui tiga vector store terpisah untuk semua tipe data."""
+    global _cached_retrievers
     if not GEMINI_API_KEY:
         yield "ERROR: GEMINI_API_KEY tidak ditemukan. Proses dihentikan.\n"
         return
@@ -58,12 +68,24 @@ def create_vector_db():
     yield "\n--- MEMPROSES DATA SCRAPING ---\n"
     scraped_docs = get_scraped_documents_for_indexing()
     yield from _create_specific_index(scraped_docs, FAISS_SCRAPED_PATH, "Data Scraping", embeddings)
-    
+
+    # Invalidate cache so next chat loads fresh indexes
+    _cached_retrievers = None
     yield "\nSemua proses indexing selesai.\n"
 
 
 def get_retrievers(k=2):
-    """Memuat semua indeks FAISS yang ada dan mengembalikannya sebagai tiga retriever terpisah."""
+    """Memuat semua indeks FAISS yang ada dan mengembalikannya sebagai tiga retriever terpisah.
+    
+    FIX #4: Results are cached at module level. FAISS.load_local is called once,
+    not on every chat request. Call invalidate_cache() to force a reload.
+    """
+    global _cached_retrievers
+    
+    # Return cached retrievers if available
+    if _cached_retrievers is not None:
+        return _cached_retrievers
+
     if not GEMINI_API_KEY:
         print("ERROR: GEMINI_API_KEY tidak ditemukan.")
         return None, None, None
@@ -95,5 +117,7 @@ def get_retrievers(k=2):
             retriever_scraped = db_scraped.as_retriever(search_kwargs={"k": k})
         except Exception as e:
             print(f"Peringatan: Gagal memuat indeks Data Scraping: {e}")
-            
-    return retriever_memory, retriever_manual, retriever_scraped
+    
+    # Cache the result
+    _cached_retrievers = (retriever_memory, retriever_manual, retriever_scraped)
+    return _cached_retrievers
