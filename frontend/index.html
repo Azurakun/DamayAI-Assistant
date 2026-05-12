@@ -1,108 +1,93 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DamayAI - Asisten Cerdas SMKN 2 Indramayu</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        'fade-in-up': 'fadeInUp 0.3s ease-out forwards',
-                        'fade-in': 'fadeIn 0.5s ease-in forwards',
-                    },
-                    keyframes: {
-                        fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        },
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                    }
-                }
-            }
-        }
-    </script>
+    <meta name="description" content="DamayAI adalah asisten virtual berbasis AI untuk SMKN 2 Indramayu. Tanyakan informasi seputar sekolah.">
 
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="favicon.png" type="image/png">
+
+    <script>
+        // Apply saved theme immediately to prevent flash of wrong theme
+        (function() {
+            var t = localStorage.getItem('damayai-user-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
 </head>
-<body class="bg-gray-100 md:flex md:items-center md:justify-center font-['Inter']">
+<body>
 
-    <div id="app-container" class="w-full h-[100dvh] md:w-[95vw] md:h-[95vh] md:max-w-6xl bg-white rounded-none md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative">
+    <div id="app-container">
 
-        <header class="bg-white/95 backdrop-blur-sm px-4 py-3 border-b border-gray-200 flex justify-between items-center z-20 flex-shrink-0">
-            <div class="flex items-center space-x-3">
-                <img src="favicon.png" alt="Logo" class="h-10 w-10 rounded-full border-2 border-blue-500 p-0.5">
+        <header>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <img src="favicon.png" alt="Logo" style="height:2.5rem;width:2.5rem;border-radius:9999px;border:2px solid var(--user-accent);padding:2px;">
                 <div>
-                    <h1 class="text-sm sm:text-lg font-bold text-gray-900 leading-tight">Asisten AI <br class="sm:hidden"> SMKN 2 Indramayu</h1>
-                    <p class="text-[10px] sm:text-xs text-green-600 font-semibold flex items-center gap-1.5 mt-0.5">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    <h1 style="font-size:0.9rem;font-weight:700;color:var(--user-text-primary);margin:0;line-height:1.2;">Asisten AI <br class="sm-hide"> SMKN 2 Indramayu</h1>
+                    <p style="font-size:0.65rem;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:0.375rem;margin:0.125rem 0 0;">
+                        <span class="online-dot">
+                          <span class="online-dot-ping"></span>
+                          <span class="online-dot-solid"></span>
                         </span>
                         Online
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button id="bug-report-btn" class="p-2 sm:px-3 sm:py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all duration-300 flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                    <i class="fas fa-bug"></i><span class="hidden sm:inline">Lapor Bug</span>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <button id="theme-toggle-user" class="user-theme-toggle" title="Ubah Tema">
+                    <i class="fas fa-moon" id="user-theme-icon"></i>
                 </button>
-                <button id="new-chat-btn" class="p-2 sm:px-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                    <i class="fas fa-plus-circle"></i><span class="hidden sm:inline">Baru</span>
+                <button id="bug-report-btn" class="header-btn header-btn-bug">
+                    <i class="fas fa-bug"></i><span class="btn-text">Lapor Bug</span>
+                </button>
+                <button id="new-chat-btn" class="header-btn header-btn-new">
+                    <i class="fas fa-plus-circle"></i><span class="btn-text">Baru</span>
                 </button>
             </div>
         </header>
 
-        <main id="chat-area" class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 scroll-smooth">
-            <div id="chat-container" class="max-w-4xl mx-auto space-y-6 pb-4">
-                 </div>
+        <main id="chat-area">
+            <div id="chat-container"></div>
         </main>
 
-        <footer class="bg-white/95 backdrop-blur-sm p-3 md:p-4 border-t border-gray-200 z-20 flex-shrink-0">
-            <div class="max-w-4xl mx-auto">
-                <form id="chat-form" class="relative flex items-center gap-2">
-                    <div class="relative flex-1">
-                        <input type="text" id="chat-input" placeholder="Tanya seputar sekolah..." class="w-full pl-4 pr-12 py-3 bg-gray-100 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800 text-sm md:text-base shadow-inner" autocomplete="off" required>
-                        <button type="submit" id="send-btn" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 hover:bg-blue-700 shadow-md">
-                            <i class="fas fa-arrow-up text-sm"></i>
+        <footer>
+            <div class="footer-inner">
+                <form id="chat-form" class="chat-form">
+                    <div style="position:relative;flex:1;">
+                        <input type="text" id="chat-input" placeholder="Tanya seputar sekolah..." autocomplete="off" required>
+                        <button type="submit" id="send-btn">
+                            <i class="fas fa-arrow-up" style="font-size:0.8rem;"></i>
                         </button>
                     </div>
                 </form>
-                <div class="text-center text-[10px] md:text-xs text-gray-400 mt-2">
-                    <p>AI dapat membuat kesalahan. Cek kembali informasi penting.</p>
-                </div>
+                <p class="disclaimer">AI dapat membuat kesalahan. Cek kembali informasi penting.</p>
             </div>
         </footer>
 
     </div>
 
-    <div id="bug-report-modal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-[60] hidden transition-opacity">
-        <div class="bg-white rounded-xl shadow-2xl w-[90%] max-w-lg overflow-hidden animate-fade-in-up">
-            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Laporkan Bug</h2>
-                <button id="close-bug-report-modal-btn" class="text-gray-400 hover:text-red-500 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">&times;</button>
+    <div id="bug-report-modal" style="display:none;">
+        <div class="bug-modal-card">
+            <div class="bug-modal-header">
+                <h2>Laporkan Bug</h2>
+                <button id="close-bug-report-modal-btn" class="bug-modal-close">&times;</button>
             </div>
-            <div class="p-5">
+            <div class="bug-modal-body">
                 <form id="bug-report-form">
-                    <div class="mb-4">
-                        <label for="bug-description" class="block text-sm font-medium text-gray-700 mb-1">Jelaskan masalahnya</label>
-                        <textarea id="bug-description" name="description" rows="4" class="w-full bg-gray-50 text-gray-800 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Contoh: Jawaban AI terpotong saat..." required></textarea>
+                    <div style="margin-bottom:1rem;">
+                        <label for="bug-description" class="bug-form-label">Jelaskan masalahnya</label>
+                        <textarea id="bug-description" name="description" rows="4" class="bug-form-textarea" placeholder="Contoh: Jawaban AI terpotong saat..." required></textarea>
                     </div>
-                    <div class="mb-5">
-                        <label for="bug-file" class="block text-sm font-medium text-gray-700 mb-1">Lampiran (Opsional)</label>
-                        <input type="file" id="bug-file" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept="image/*,video/*">
+                    <div style="margin-bottom:1.25rem;">
+                        <label for="bug-file" class="bug-form-label">Lampiran (Opsional)</label>
+                        <input type="file" id="bug-file" accept="image/*,video/*" style="width:100%;font-size:0.75rem;color:var(--user-text-muted);">
                     </div>
-                    <div class="flex justify-end">
-                        <button type="submit" id="submit-bug-report-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-lg shadow-blue-500/30">Kirim</button>
+                    <div style="display:flex;justify-content:flex-end;">
+                        <button type="submit" id="submit-bug-report-btn" class="bug-submit-btn">Kirim</button>
                     </div>
                 </form>
             </div>

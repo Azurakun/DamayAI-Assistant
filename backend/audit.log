@@ -1,0 +1,7 @@
+2026-03-26 12:39:32 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-04-07 10:49:46 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-04-07 11:08:39 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-05-11 18:32:02 [AUDIT] [192.168.1.61] LOGIN_SUCCESS | Admin logged in
+2026-05-11 20:00:46 [AUDIT] [192.168.1.61] DATABASE_DELETE | All database collections dropped
+2026-05-11 20:01:13 [AUDIT] [192.168.1.61] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-05-11 20:02:12 [AUDIT] [192.168.1.61] REINDEX_START | FAISS reindexing initiated

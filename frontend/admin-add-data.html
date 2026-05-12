@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambah Data — DamayAI Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="icon" href="favicon.png" type="image/png">
+    <script>
+        (function() {
+            var t = localStorage.getItem('damayai-admin-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+</head>
+<body>
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg-overlay);display:flex;align-items:center;justify-content:center;z-index:100;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-card);padding:2.5rem;border-radius:1.25rem;text-align:center;max-width:380px;width:90%;backdrop-filter:var(--glass-blur);box-shadow:var(--card-shadow);">
+            <div style="margin-bottom:1.5rem;">
+                <i class="fas fa-shield-halved" style="font-size:2.5rem;color:var(--text-accent);margin-bottom:0.75rem;display:block;"></i>
+                <h2 style="margin:0;font-size:1.5rem;font-weight:700;color:var(--text-primary);">Akses Admin</h2>
+                <p style="margin:0.5rem 0 0;font-size:0.9rem;color:var(--text-muted);">Masukkan sandi untuk melanjutkan.</p>
+            </div>
+            <input type="password" id="admin-code" class="form-input" style="text-align:center;letter-spacing:0.2em;font-size:1.1rem;padding:1rem;" placeholder="••••••" autocomplete="current-password">
+            <p id="error-msg" style="color:#ef4444;margin:0.75rem 0 0;min-height:1.25rem;font-size:0.85rem;font-weight:500;"></p>
+        </div>
+    </div>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <button class="hamburger-btn" id="hamburger-btn"><i class="fas fa-bars"></i></button>
+        <h1>DamayAI</h1>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main Layout -->
+    <div id="admin-panel" class="admin-layout" style="display:none;">
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-header">
+                <h1>DamayAI</h1>
+                <p>Panel Administrasi</p>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Menu Utama</div>
+                <a href="admin.html" class="nav-item"><span class="nav-icon"><i class="fas fa-gauge-high"></i></span>Dashboard</a>
+                <a href="admin-add-data.html" class="nav-item active"><span class="nav-icon"><i class="fas fa-file-circle-plus"></i></span>Tambah Data</a>
+                <a href="admin-data-bank.html" class="nav-item"><span class="nav-icon"><i class="fas fa-database"></i></span>Data Bank</a>
+                <a href="admin-bugs.html" class="nav-item"><span class="nav-icon"><i class="fas fa-bug"></i></span>Laporan Bug</a>
+                <a href="admin-ai.html" class="nav-item"><span class="nav-icon"><i class="fas fa-robot"></i></span>Uji Coba AI</a>
+                <div class="nav-section-label" style="margin-top:0.75rem;">Sistem</div>
+                <a href="admin-settings.html" class="nav-item"><span class="nav-icon"><i class="fas fa-gear"></i></span>Pengaturan</a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="theme-toggle-btn" id="theme-toggle-btn"><span class="theme-icon" id="theme-icon"><i class="fas fa-moon"></i></span><span id="theme-label">Tema</span></button>
+                <button class="theme-toggle-btn" id="logout-btn" style="flex:0;padding:0.65rem 0.8rem;" title="Logout"><i class="fas fa-right-from-bracket"></i></button>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <h2 class="page-title">Tambah Data</h2>
+            <p class="page-subtitle">Tambahkan konteks baru untuk memperkaya pengetahuan AI.</p>
+
+            <div class="grid-2">
+                <!-- Text Form -->
+                <div class="admin-card">
+                    <div class="admin-card-title"><i class="fas fa-keyboard" style="margin-right:0.5rem;color:var(--text-accent);"></i> Teks Manual</div>
+                    <form id="manual-text-form" style="display:flex;flex-direction:column;gap:1.25rem;">
+                        <div>
+                            <label for="manual-title-text" class="form-label">Judul (Opsional)</label>
+                            <input type="text" id="manual-title-text" name="title" class="form-input" placeholder="Contoh: Jadwal PPDB 2024">
+                        </div>
+                        <div>
+                            <label for="manual-content" class="form-label">Konten Teks</label>
+                            <textarea id="manual-content" name="content" class="form-textarea" rows="8" placeholder="Ketik atau tempel informasi dokumen yang valid di sini..." required></textarea>
+                        </div>
+                        <button type="submit" id="manual-text-submit-btn" class="btn btn-primary" style="margin-top:0.5rem;">
+                            <i class="fas fa-plus-circle"></i> Simpan Konteks Teks
+                        </button>
+                    </form>
+                </div>
+
+                <!-- File Form -->
+                <div class="admin-card">
+                    <div class="admin-card-title"><i class="fas fa-file-arrow-up" style="margin-right:0.5rem;color:var(--text-accent);"></i> Upload Dokumen</div>
+                    <form id="manual-file-form" style="display:flex;flex-direction:column;gap:1.25rem;">
+                        <div>
+                            <label for="manual-title-file" class="form-label">Judul File</label>
+                            <input type="text" id="manual-title-file" name="title" class="form-input" placeholder="(Bila kosong, gunakan nama file asli)">
+                        </div>
+                        <div>
+                            <label class="form-label">Upload File PDF/Word/PPT</label>
+                            <label class="file-upload-zone" for="manual-file">
+                                <i class="fas fa-cloud-arrow-up upload-icon"></i>
+                                <span id="file-upload-filename" class="upload-text">Klik untuk Memilih File (.pdf, .docx, .pptx)</span>
+                            </label>
+                            <input type="file" id="manual-file" name="file" style="display:none;" accept=".pdf,.docx,.pptx" required>
+                        </div>
+                        <button type="submit" id="manual-file-submit-btn" class="btn btn-primary" style="margin-top:0.5rem;">
+                            <i class="fas fa-upload"></i> Ekstrak & Simpan File
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="admin.js"></script>
+</body>
+</html>

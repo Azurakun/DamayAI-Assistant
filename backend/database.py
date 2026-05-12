@@ -58,7 +58,7 @@ def _format_doc(doc):
 
 # --- CRUD FUNCTION: MANUAL DATA ---
 
-def add_manual_data(source_name, title, content):
+def add_manual_data(source_name, title, content, file_path=None):
     database = get_db()
     data = {
         "source_name": source_name,
@@ -66,6 +66,8 @@ def add_manual_data(source_name, title, content):
         "content": content,
         "added_at": datetime.datetime.utcnow()
     }
+    if file_path:
+        data["file_path"] = file_path
     try:
         database.manual_data.replace_one(
             {"source_name": source_name}, 

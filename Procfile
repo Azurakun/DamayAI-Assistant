@@ -1,1 +1,1 @@
-web: cd backend && gunicorn -b 0.0.0.0:5000 app:app
+web: cd backend && gunicorn --worker-class gthread --threads 4 -b 0.0.0.0:5000 app:app

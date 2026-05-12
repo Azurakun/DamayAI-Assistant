@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Widget — DamayAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        /* Top Info Bar */
+        .preview-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-bottom: 1px solid #475569;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            z-index: 99999;
+            flex-wrap: wrap;
+        }
+        .preview-bar h1 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .preview-bar p { font-size: 0.75rem; color: #94a3b8; }
+        .embed-code-box {
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #4ade80;
+            max-width: 600px;
+            overflow-x: auto;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .copy-embed-btn {
+            padding: 0.5rem 1rem;
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .copy-embed-btn:hover { background: #4338ca; }
+
+        /* School website simulation */
+        .school-site-frame {
+            margin-top: 56px;
+            width: 100%;
+            height: calc(100vh - 56px);
+            border: none;
+        }
+
+        /* Fallback if iframe blocked */
+        .fallback-page {
+            margin-top: 56px;
+            padding: 3rem 2rem;
+            text-align: center;
+            display: none;
+        }
+        .fallback-page h2 { font-size: 1.5rem; margin-bottom: 1rem; color: #60a5fa; }
+        .fallback-page p { font-size: 0.9rem; color: #94a3b8; max-width: 600px; margin: 0 auto 1.5rem; line-height: 1.6; }
+        .mock-site {
+            background: #f1f5f9;
+            border-radius: 1rem;
+            padding: 3rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: left;
+            color: #0f172a;
+        }
+        .mock-nav {
+            background: #1e40af;
+            color: #fff;
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem 0.75rem 0 0;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .mock-hero {
+            background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+        .mock-hero h2 { font-size: 1.25rem; color: #1e3a8a; margin-bottom: 0.5rem; }
+        .mock-hero p { font-size: 0.85rem; color: #475569; }
+        .mock-content { padding: 1.5rem; }
+        .mock-content h3 { font-size: 1rem; color: #1e293b; margin-bottom: 0.75rem; }
+        .mock-content p { font-size: 0.85rem; color: #475569; line-height: 1.6; margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body>
+    <div class="preview-bar">
+        <div>
+            <h1>🔍 Preview Widget DamayAI</h1>
+            <p>Widget ini akan muncul di pojok kanan bawah website sekolah.</p>
+        </div>
+        <div class="embed-code-box" id="embed-code">
+            &lt;script src="<span id="widget-url"></span>/widget.js"&gt;&lt;/script&gt;
+        </div>
+        <button class="copy-embed-btn" id="copy-btn">📋 Salin Kode Embed</button>
+    </div>
+
+    <!-- Try loading school site in iframe -->
+    <iframe 
+        src="https://smkn2indramayu.sch.id/" 
+        class="school-site-frame" 
+        id="school-iframe"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+    ></iframe>
+
+    <!-- Fallback if iframe is blocked by X-Frame-Options -->
+    <div class="fallback-page" id="fallback">
+        <h2>Preview Widget DamayAI</h2>
+        <p>
+            Website sekolah tidak bisa dimuat di preview karena pengaturan keamanan server.
+            Tapi widget chat tetap terlihat di pojok kanan bawah halaman ini! ↘️
+        </p>
+        <div class="mock-site">
+            <div class="mock-nav">
+                🏫 SMKN 2 Indramayu — Website Resmi
+            </div>
+            <div class="mock-hero">
+                <h2>Selamat Datang di SMKN 2 Indramayu</h2>
+                <p>Sekolah Menengah Kejuruan Negeri 2 Indramayu — Unggul, Berkarakter, dan Berprestasi</p>
+            </div>
+            <div class="mock-content">
+                <h3>Tentang Sekolah</h3>
+                <p>SMKN 2 Indramayu adalah sekolah menengah kejuruan yang berlokasi di Kabupaten Indramayu, Jawa Barat. Sekolah ini menawarkan berbagai program keahlian untuk mempersiapkan siswa memasuki dunia kerja maupun pendidikan tinggi.</p>
+                <h3>Program Keahlian</h3>
+                <p>Teknik Komputer dan Jaringan, Multimedia, Rekayasa Perangkat Lunak, Akuntansi, dan berbagai program unggulan lainnya.</p>
+                <p style="color:#94a3b8;font-style:italic;font-size:0.8rem;margin-top:2rem;">
+                    ← Ini adalah simulasi tampilan website sekolah. Klik tombol chat di pojok kanan bawah untuk mencoba widget DamayAI.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the actual widget -->
+    <script src="widget.js"></script>
+
+    <script>
+        // Auto-detect server URL and update embed code
+        const serverUrl = window.location.origin;
+        document.getElementById('widget-url').textContent = serverUrl;
+
+        // Copy embed code
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const code = `<script src="${serverUrl}/widget.js"><\/script>`;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.textContent = '✅ Tersalin!';
+                setTimeout(() => { btn.textContent = '📋 Salin Kode Embed'; }, 2000);
+            });
+        });
+
+        // Fallback if iframe fails to load
+        const iframe = document.getElementById('school-iframe');
+        const fallback = document.getElementById('fallback');
+
+        iframe.addEventListener('error', () => {
+            iframe.style.display = 'none';
+            fallback.style.display = 'block';
+        });
+
+        // Also check after timeout (some X-Frame-Options blocks don't trigger error)
+        setTimeout(() => {
+            try {
+                // If we can't access iframe content, it's blocked
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (!doc || !doc.body || doc.body.innerHTML === '') {
+                    iframe.style.display = 'none';
+                    fallback.style.display = 'block';
+                }
+            } catch (e) {
+                // Cross-origin — iframe loaded but can't access
+                // This is actually fine, the school site loaded
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

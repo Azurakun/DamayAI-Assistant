@@ -1,5 +1,7 @@
 Flask
 flask-session
+flask-limiter
+bleach
 python-dotenv
 google-generativeai
 google-ai-generativelanguage

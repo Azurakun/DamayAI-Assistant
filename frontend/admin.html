@@ -1,174 +1,161 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        #file-upload-filename {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .filter-btn.active {
-            background-color: #4f46e5;
-            color: white;
-        }
-        .bug-filter-btn.active {
-            background-color: #4f46e5;
-            color: white;
-        }
-    </style>
+    <title>Admin Dashboard — DamayAI</title>
+    <meta name="description" content="Dashboard utama aplikasi DamayAI.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="icon" href="favicon.png" type="image/png">
+    <script>
+        (function() {
+            var t = localStorage.getItem('damayai-admin-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
 </head>
-<body class="bg-gray-900 text-white font-mono">
+<body>
 
-    <div id="auth-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-lg text-center">
-            <h2 class="text-2xl mb-4">Akses Panel Admin</h2>
-            <p class="mb-6 text-gray-400">Masukkan kode untuk melanjutkan.</p>
-            <input type="password" id="admin-code" class="bg-gray-700 text-white p-3 rounded-lg w-full text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="******">
-            <p id="error-msg" class="text-red-400 mt-2 h-5"></p>
+    <!-- === AUTH OVERLAY === -->
+    <div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg-overlay);display:flex;align-items:center;justify-content:center;z-index:100;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-card);padding:2.5rem;border-radius:1.25rem;text-align:center;max-width:380px;width:90%;backdrop-filter:var(--glass-blur);box-shadow:var(--card-shadow);">
+            <div style="margin-bottom:1.5rem;">
+                <i class="fas fa-shield-halved" style="font-size:2.5rem;color:var(--text-accent);margin-bottom:0.75rem;display:block;"></i>
+                <h2 style="margin:0;font-size:1.5rem;font-weight:700;color:var(--text-primary);">Akses Admin</h2>
+                <p style="margin:0.5rem 0 0;font-size:0.9rem;color:var(--text-muted);">Masukkan sandi untuk melanjutkan.</p>
+            </div>
+            <input type="password" id="admin-code" class="form-input" style="text-align:center;letter-spacing:0.2em;font-size:1.1rem;padding:1rem;" placeholder="••••••" autocomplete="current-password">
+            <p id="error-msg" style="color:#ef4444;margin:0.75rem 0 0;min-height:1.25rem;font-size:0.85rem;font-weight:500;"></p>
         </div>
     </div>
 
-    <div id="admin-panel" class="container mx-auto p-8 hidden max-h-screen">
-        <h1 class="text-3xl font-bold mb-2 text-blue-400">Admin Panel - DamayAI</h1>
-        <p class="text-sm text-gray-500 mb-6">PENTING: Setelah menambah/mengubah data, selalu klik 'Rebuild FAISS Index' agar AI terupdate.</p>
+    <!-- === MOBILE HEADER === -->
+    <div class="mobile-header">
+        <button class="hamburger-btn" id="hamburger-btn"><i class="fas fa-bars"></i></button>
+        <h1>DamayAI</h1>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-1">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-4">
-                    <h2 class="text-lg font-semibold text-gray-300">Kontrol Data</h2>
-                    <button id="tutorial-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-sm rounded">Buka Tutorial</button>
-                </div>
-                
-                <h3 class="text-md font-semibold text-gray-400 mb-2">Workflow Utama</h3>
-                <div class="space-y-3">
-                    <button id="scrape-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">1. Scrape URLs dari File</button>
-                    <button id="reindex-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">2. Rebuild FAISS Index</button>
-                    <button id="view-data-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg">Lihat/Ubah Data Bank</button>
-                    <button id="view-bugs-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg">Lihat Laporan Bug</button>
-                </div>
+    <!-- === SIDEBAR OVERLAY (mobile) === -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-                <h3 class="text-md font-semibold text-gray-400 mt-6 mb-2">Tindakan Berbahaya</h3>
-                <div class="space-y-3">
-                    <button id="delete-faiss-btn" class="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-3 px-4 rounded-lg">Hapus Index FAISS</button>
-                    <button id="delete-db-btn" class="w-full bg-red-800 hover:bg-red-900 text-white font-bold py-3 px-4 rounded-lg">Hapus Database (Reset Total)</button>
-                </div>
+    <!-- === MAIN LAYOUT === -->
+    <div id="admin-panel" class="admin-layout" style="display:none;">
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-header">
+                <h1>DamayAI</h1>
+                <p>Panel Administrasi</p>
             </div>
 
-            <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gray-800 p-6 rounded-lg">
-                    <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Tambah Konteks Teks Manual</h2>
-                    <form id="manual-text-form" class="space-y-4">
-                        <div>
-                            <label for="manual-title-text" class="block text-sm font-medium text-gray-400 mb-1">Judul (Opsional)</label>
-                            <input type="text" id="manual-title-text" name="title" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Jadwal PPDB 2024">
-                        </div>
-                        <div>
-                            <label for="manual-content" class="block text-sm font-medium text-gray-400 mb-1">Konten Teks</label>
-                            <textarea id="manual-content" name="content" rows="8" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik atau tempel konten teks di sini..." required></textarea>
-                        </div>
-                        <button type="submit" id="manual-text-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Tambah Konteks Teks</button>
-                    </form>
-                </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Menu Utama</div>
+                <a href="admin.html" class="nav-item active">
+                    <span class="nav-icon"><i class="fas fa-gauge-high"></i></span>
+                    Dashboard
+                </a>
+                <a href="admin-add-data.html" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-file-circle-plus"></i></span>
+                    Tambah Data
+                </a>
+                <a href="admin-data-bank.html" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-database"></i></span>
+                    Data Bank
+                </a>
+                <a href="admin-bugs.html" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-bug"></i></span>
+                    Laporan Bug
+                </a>
+                <a href="admin-ai.html" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-robot"></i></span>
+                    Uji Coba AI
+                </a>
 
-                <div class="bg-gray-800 p-6 rounded-lg">
-                    <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Tambah Konteks File</h2>
-                    <form id="manual-file-form" class="space-y-4">
-                        <div>
-                            <label for="manual-title-file" class="block text-sm font-medium text-gray-400 mb-1">Judul (Opsional, jika kosong akan memakai nama file)</label>
-                            <input type="text" id="manual-title-file" name="title" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Panduan Seleksi">
-                        </div>
-                        <div>
-                             <label for="manual-file" class="block text-sm font-medium text-gray-400 mb-1">Upload File</label>
-                             <label class="w-full flex items-center justify-center px-4 py-6 bg-gray-700 text-gray-300 rounded-lg cursor-pointer hover:bg-gray-600 border-2 border-dashed border-gray-600">
-                                <div class="text-center">
-                                    <svg class="w-10 h-10 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                                    <span id="file-upload-filename" class="mt-2 block text-sm">Pilih File (.pdf, .docx, .pptx)</span>
-                                </div>
-                                <input type="file" id="manual-file" name="file" class="hidden" accept=".pdf,.docx,.pptx" required>
-                            </label>
-                        </div>
-                        <button type="submit" id="manual-file-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Tambah Konteks File</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+                <div class="nav-section-label" style="margin-top:0.75rem;">Sistem</div>
+                <a href="admin-settings.html" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-gear"></i></span>
+                    Pengaturan
+                </a>
+            </nav>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-1">
-                 <h2 class="text-lg font-semibold text-gray-300 mb-4 border-b border-gray-700 pb-2">Status Sistem</h2>
-                 <p class="text-gray-400">Status Proses: <span id="status" class="font-semibold text-yellow-400">Idle</span></p>
-                 <div id="console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar mt-4">
-                    <p class="text-gray-500">> Menunggu perintah...</p>
-                 </div>
+            <div class="sidebar-footer">
+                <button class="theme-toggle-btn" id="theme-toggle-btn">
+                    <span class="theme-icon" id="theme-icon"><i class="fas fa-moon"></i></span>
+                    <span id="theme-label">Tema</span>
+                </button>
+                <button class="theme-toggle-btn" id="logout-btn" style="flex:0;padding:0.65rem 0.8rem;" title="Logout">
+                    <i class="fas fa-right-from-bracket"></i>
+                </button>
             </div>
-            <div class="bg-gray-800 p-6 rounded-lg lg:col-span-2">
-                <h2 class="text-xl font-semibold mb-4 text-gray-300">Uji Coba AI & Proses Berpikir Real-time</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-300 mb-4">Ajukan Pertanyaan</h3>
-                        <form id="admin-chat-form">
-                            <textarea id="admin-chat-input" rows="4" class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 custom-scrollbar focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ketik pertanyaan Anda di sini untuk melihat proses berpikir AI..."></textarea>
-                            <button type="submit" id="admin-chat-submit" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Kirim & Analisis</button>
-                        </form>
-                    </div>
-                    <div>
-                        <div id="thinking-console" class="bg-black p-4 rounded-lg h-96 overflow-y-auto border border-gray-700 custom-scrollbar">
-                            <p class="text-gray-500">> Menunggu pertanyaan untuk dianalisis...</p>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <h2 class="page-title">Dashboard</h2>
+            <p class="page-subtitle">Selamat datang di panel admin DamayAI. Pantau sistem dari sini.</p>
+
+            <div class="grid-2">
+                <div style="display:flex;flex-direction:column;gap:1.5rem;">
+                    <!-- Real-Time Crawler Action -->
+                    <div class="admin-card">
+                        <div class="admin-card-title">
+                            <span><i class="fas fa-spider" style="margin-right:0.5rem;color:var(--text-accent);"></i> Auto Crawler Website</span>
+                        </div>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5;">
+                            Sistem akan mengeksplorasi link di dalam website target secara otomatis dan menyimpannya ke database untuk dipelajari AI.
+                        </p>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <input type="url" id="crawl-url-input" class="form-input" placeholder="Contoh: https://smkn2indramayu.sch.id">
+                            <button id="crawl-btn" class="btn btn-primary" style="width:100%;">
+                                <i class="fas fa-search-location"></i> Mulai Deep Crawling
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Workflow Utama -->
+                    <div class="admin-card">
+                        <div class="admin-card-title">
+                            <span><i class="fas fa-bolt" style="margin-right:0.5rem;color:#facc15;"></i> Workflow Utama</span>
+                        </div>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
+                            Selalu sinkronkan memori dengan klik <strong>'Rebuild FAISS Index'</strong> setelah menambah data baru.
+                        </p>
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                            <button id="scrape-btn" class="btn btn-info" style="flex:1;">
+                                <i class="fas fa-file-import"></i> Scrape URLs (txt)
+                            </button>
+                            <button id="reindex-btn" class="btn btn-success" style="flex:1;">
+                                <i class="fas fa-rotate"></i> Rebuild Index
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <div class="admin-card-title">
+                        <span><i class="fas fa-terminal" style="margin-right:0.5rem;color:#4ade80;"></i> Status Terkini</span>
+                        <span id="status" class="status-badge status-idle"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Idle</span>
+                    </div>
+                    <div id="console" class="console-box">
+                        <p style="color:var(--text-muted);">&gt; Menunggu perintah...</p>
+                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <div id="tutorial-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 text-white rounded-lg shadow-xl w-11/12 max-w-2xl h-5/6 flex flex-col">
-            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold">Tutorial Penggunaan Panel Admin</h2>
-                <button id="close-tutorial-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    <!-- === TUTORIAL MODAL === -->
+    <div id="tutorial-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal-content" style="max-width:40rem;">
+            <div class="modal-header">
+                <h2><i class="fas fa-book" style="margin-right:0.5rem;"></i> Tutorial Penggunaan</h2>
+                <button id="close-tutorial-btn" class="modal-close">&times;</button>
             </div>
-            <div id="tutorial-content-container" class="p-6 overflow-y-auto custom-scrollbar">
-                <p class="text-yellow-400">Memuat tutorial...</p>
+            <div id="tutorial-content-container" class="modal-body">
+                <p style="color:var(--text-muted);">Memuat tutorial...</p>
             </div>
-        </div>
-    </div>
-    
-    <div id="data-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 text-white rounded-lg shadow-xl w-11/12 max-w-4xl h-5/6 flex flex-col">
-            <div class="p-4 border-b border-gray-700">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 id="modal-title" class="text-xl font-bold">Data Bank</h2>
-                    <button id="close-modal-btn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-                </div>
-                <div id="data-filter-container" class="hidden flex flex-wrap gap-2">
-                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600 active" data-filter="Semua">Semua</button>
-                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Scrap">Scrap</button>
-                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Manual">Manual</button>
-                    <button class="filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Memory">Memory</button>
-                </div>
-                <div id="search-container" class="hidden mt-4">
-                    <input type="search" id="search-data-input" placeholder="Cari berdasarkan judul atau konten..." class="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div id="bug-filter-container" class="hidden flex flex-wrap gap-2 mt-4">
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600 active" data-filter="Semua">Semua</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Baru">Baru</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Sedang Diproses">Sedang Diproses</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Selesai">Selesai</button>
-                    <button class="bug-filter-btn px-3 py-1 text-sm rounded-md bg-gray-700 hover:bg-gray-600" data-filter="Tidak Akan Diperbaiki">Tidak Akan Diperbaiki</button>
-                </div>
-            </div>
-            <div id="modal-content-list" class="p-6 overflow-y-auto custom-scrollbar"></div>
-            <div id="modal-content-edit" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
-            <div id="modal-content-detail" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
-            <div id="modal-content-bug-detail" class="p-6 overflow-y-auto hidden custom-scrollbar"></div>
         </div>
     </div>
 
