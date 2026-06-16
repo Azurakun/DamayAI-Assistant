@@ -6,7 +6,7 @@ import logging
 import secrets
 import html
 import datetime
-import google.generativeai as genai
+from groq import Groq
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory, session
 from functools import wraps
 from dotenv import load_dotenv
@@ -17,7 +17,8 @@ from database import (
     add_to_memory, get_all_memory_data, update_memory_data, delete_memory_data,
     add_manual_data, get_all_manual_data, update_manual_data, delete_manual_data,
     add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report,
-    get_db 
+    get_db, get_dashboard_stats, get_scraped_data_by_id, get_manual_data_by_id, 
+    get_memory_data_by_id, get_bug_report_by_id
 )
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -63,7 +64,10 @@ if not SECRET_KEY:
     print("Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
     sys.exit(1)
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    print("WARNING: GROQ_API_KEY environment variable is not set.")
+client = Groq(api_key=GROQ_API_KEY)
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 os.makedirs(os.path.join(UPLOADS_DIR, 'bugs'), exist_ok=True)
@@ -110,7 +114,8 @@ except ImportError:
         def exempt(self, f): return f
     limiter = _DummyLimiter()
 
-model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+# Menggunakan model Llama 3 via Groq
+# client diinisialisasi di atas
 
 FAISS_MEMORY_PATH = "db/faiss_index_memory"
 FAISS_MANUAL_PATH = "db/faiss_index_manual"
@@ -662,7 +667,8 @@ def generate_response(user_query, history):
                         "source_type": "Website Scraping",
                         "title": doc.metadata.get('title', 'Website'),
                         "source": doc.metadata.get('source', '#'),
-                        "content": doc.page_content
+                        "content": doc.page_content,
+                        "image_url": doc.metadata.get('image_url', '')
                     })
             else:
                 yield {"step": "scrape_not_found", "data": "Tidak ada yang cocok di Data Scraping."}
@@ -675,11 +681,12 @@ def generate_response(user_query, history):
 
     context_str = ""
     for i, item in enumerate(retrieved_knowledge):
+        image_line = f"\n        [Gambar]: {item['image_url']}" if item.get('image_url') else ""
         context_str += f"""
         --- DOCUMENT #{i+1} ---
         [Tipe]: {item['source_type']}
         [Judul]: {item['title']}
-        [Source/URL]: {item['source']}
+        [Source/URL]: {item['source']}{image_line}
         [Konten]:
         {item['content']}
         -----------------------
@@ -691,11 +698,15 @@ def generate_response(user_query, history):
         ### SYSTEM PROMPT (DamayAI) ###
 
         # Identitas & Gaya Bicara
-        Anda adalah DamayAI, asisten digital SMKN 2 Indramayu.
+        Anda adalah DamayAI, resepsionis digital SMKN 2 Indramayu.
+        - **Langsung & Percaya Diri**: Jawab langsung seperti resepsionis sekolah yang sudah hafal semua informasi. JANGAN pernah menjelaskan proses pencarian Anda ("saya menemukan...", "dari data yang tersedia...", "berdasarkan informasi..."). Langsung sampaikan jawabannya saja.
+        - **Contoh BURUK**: "Dari informasi yang saya temukan, saya dapat menyimpulkan bahwa nama Kepsek adalah Ibu Yeti Sumiati."
+        - **Contoh BAIK**: "Kepala Sekolah SMKN 2 Indramayu saat ini adalah Ibu **Yeti Sumiati**."
         - **Human-like**: Bicaralah secara luwes, natural, dan sopan seperti manusia (Adik Panca/Dik Panca).
         - **Fleksibel**: Anda BOLEH mengobrol santai (small talk) tanpa data database jika pengguna hanya menyapa atau bertanya kabar.
         - **Grounding Wajib**: JIKA pengguna bertanya tentang fakta, info sekolah, atau data teknis, Anda WAJIB menggunakan "DATA PENDUKUNG" di bawah.
-        - **Jujur**: Jika data tidak ada di context, katakan belum tahu, tapi tetaplah ramah.
+        - **Inferensi Logis (Reasoning)**: Jika informasi tidak tertulis secara eksplisit, lakukan penalaran logis dari konteks secara DIAM-DIAM. Langsung sampaikan hasilnya tanpa menjelaskan proses berpikirnya.
+        - **Jujur**: Jika data benar-benar tidak ada atau tidak bisa disimpulkan dari context, katakan belum tahu, tapi tetaplah ramah.
 
         # Aturan Sitasi (PENTING!)
         Agar pengguna bisa melihat sumber data, ikuti aturan ini saat mengambil fakta dari "DATA PENDUKUNG":
@@ -707,8 +718,8 @@ def generate_response(user_query, history):
 
         # Format Jawaban
         1. Gunakan **Markdown** (Bold `**`, Italic `*`, List `-`, Tabel `|...|`).
-        2. Buat jawaban ringkas, padat, dan mudah dibaca (poin-poin sangat disarankan).
-        3. Sertakan `[IMAGE: url]` jika ada gambar di data pendukung.
+        2. Buat jawaban ringkas, padat, dan mudah dibaca (poin-poin sangat disarankan). JANGAN bertele-tele.
+        3. **Gambar (PENTING)**: Jika dokumen DATA PENDUKUNG memiliki field `[Gambar]` dengan URL gambar, Anda WAJIB menyertakan gambar tersebut dalam jawaban menggunakan tag `[IMAGE: url_gambar]`. Terutama jika pengguna bertanya tentang kegiatan, suasana, atau hal visual lainnya. Sertakan gambar secara proaktif untuk memperkaya jawaban, jangan hanya jika diminta.
 
         ---
         # DATA PENDUKUNG (Gunakan ini untuk fakta)
@@ -728,10 +739,23 @@ def generate_response(user_query, history):
         Jawaban (Ingat tag [CITE:...] jika menggunakan data):
         """
         
-        chat_session = model.start_chat(history=history)
-        final_response = chat_session.send_message(final_prompt_text)
+        messages = []
+        for msg in history:
+            role = "user" if msg['role'] == "user" else "assistant"
+            content = " ".join([part['text'] for part in msg.get('parts', [])])
+            messages.append({"role": role, "content": content})
+            
+        messages.append({"role": "user", "content": final_prompt_text})
         
-        yield {"step": "final_answer", "data": final_response.text}
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model="llama-3.1-8b-instant",
+            temperature=0.7,
+            max_tokens=2048
+        )
+        final_response_text = chat_completion.choices[0].message.content
+        
+        yield {"step": "final_answer", "data": final_response_text}
     except Exception as e:
         yield {"step": "error", "data": f"Gagal menghasilkan jawaban akhir. Error: {e}"}
 
@@ -908,6 +932,238 @@ def update_delete_data_handler(type, item_id):
             
     except Exception as e:
         return jsonify({"status": "error", "message": "Operasi gagal."}), 500
+
+# ==========================================
+#  NEW RESTful API ENDPOINTS (15+ ENDPOINTS)
+# ==========================================
+
+# 1. Health Check - Public
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Check API and database health status."""
+    try:
+        db = get_db()
+        db.command('ping')
+        return jsonify({
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }), 503
+
+# 2. Dashboard Statistics - Admin
+@app.route('/api/dashboard/stats', methods=['GET'])
+@require_admin
+def dashboard_stats():
+    """Get dashboard statistics and counts."""
+    try:
+        stats = get_dashboard_stats()
+        return jsonify({"status": "success", "data": stats})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 3. Get All Scraped Data - Admin
+@app.route('/api/scraped-data', methods=['GET'])
+@require_admin
+def get_scraped_data_handler():
+    """Get all scraped data entries."""
+    try:
+        data = get_all_scraped_data()
+        return jsonify({"status": "success", "count": len(data), "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 4. Get Single Scraped Data by ID - Admin
+@app.route('/api/scraped-data/<string:item_id>', methods=['GET'])
+@require_admin
+def get_scraped_data_by_id_handler(item_id):
+    """Get single scraped data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = get_scraped_data_by_id(item_id)
+        if not data:
+            return jsonify({"status": "error", "message": "Data tidak ditemukan."}), 404
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 5. Get All Manual Data - Admin
+@app.route('/api/manual-data', methods=['GET'])
+@require_admin
+def get_manual_data_handler():
+    """Get all manual data entries."""
+    try:
+        data = get_all_manual_data()
+        return jsonify({"status": "success", "count": len(data), "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 6. Get Single Manual Data by ID - Admin
+@app.route('/api/manual-data/<string:item_id>', methods=['GET'])
+@require_admin
+def get_manual_data_by_id_handler(item_id):
+    """Get single manual data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = get_manual_data_by_id(item_id)
+        if not data:
+            return jsonify({"status": "error", "message": "Data tidak ditemukan."}), 404
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 7. Get All Memory Data - Admin
+@app.route('/api/memory-data', methods=['GET'])
+@require_admin
+def get_memory_data_handler():
+    """Get all memory bank data."""
+    try:
+        data = get_all_memory_data()
+        return jsonify({"status": "success", "count": len(data), "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 8. Get Single Memory Data by ID - Admin
+@app.route('/api/memory-data/<string:item_id>', methods=['GET'])
+@require_admin
+def get_memory_data_by_id_handler(item_id):
+    """Get single memory data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = get_memory_data_by_id(item_id)
+        if not data:
+            return jsonify({"status": "error", "message": "Data tidak ditemukan."}), 404
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 9. Get Single Bug Report by ID - Admin
+@app.route('/api/bug_reports/<string:report_id>', methods=['GET'])
+@require_admin
+def get_bug_report_by_id_handler(report_id):
+    """Get single bug report by ID."""
+    if not is_valid_object_id(report_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = get_bug_report_by_id(report_id)
+        if not data:
+            return jsonify({"status": "error", "message": "Laporan tidak ditemukan."}), 404
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 10. Update Scraped Data - Admin
+@app.route('/api/scraped-data/<string:item_id>', methods=['PUT'])
+@require_admin
+@require_csrf
+def update_scraped_data_handler(item_id):
+    """Update scraped data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = request.json
+        title = data.get('title')
+        content = data.get('content')
+        if content and len(content) > MAX_TEXT_CONTENT_LENGTH:
+            return jsonify({"status": "error", "message": "Konten terlalu panjang."}), 400
+        update_scraped_data(item_id, title, content)
+        audit_log("DATA_UPDATE", f"Updated Scraped #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data scraped berhasil diperbarui."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 11. Delete Scraped Data - Admin
+@app.route('/api/scraped-data/<string:item_id>', methods=['DELETE'])
+@require_admin
+@require_csrf
+def delete_scraped_data_handler(item_id):
+    """Delete scraped data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        delete_scraped_data(item_id)
+        audit_log("DATA_DELETE", f"Deleted Scraped #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data scraped berhasil dihapus."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 12. Update Manual Data - Admin
+@app.route('/api/manual-data/<string:item_id>', methods=['PUT'])
+@require_admin
+@require_csrf
+def update_manual_data_handler(item_id):
+    """Update manual data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = request.json
+        title = data.get('title')
+        content = data.get('content')
+        if content and len(content) > MAX_TEXT_CONTENT_LENGTH:
+            return jsonify({"status": "error", "message": "Konten terlalu panjang."}), 400
+        update_manual_data(item_id, title, content)
+        audit_log("DATA_UPDATE", f"Updated Manual #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data manual berhasil diperbarui."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 13. Delete Manual Data - Admin
+@app.route('/api/manual-data/<string:item_id>', methods=['DELETE'])
+@require_admin
+@require_csrf
+def delete_manual_data_handler(item_id):
+    """Delete manual data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        delete_manual_data(item_id)
+        audit_log("DATA_DELETE", f"Deleted Manual #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data manual berhasil dihapus."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 14. Update Memory Data - Admin
+@app.route('/api/memory-data/<string:item_id>', methods=['PUT'])
+@require_admin
+@require_csrf
+def update_memory_data_handler(item_id):
+    """Update memory data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        data = request.json
+        question = data.get('question')
+        answer = data.get('answer')
+        if answer and len(answer) > MAX_TEXT_CONTENT_LENGTH:
+            return jsonify({"status": "error", "message": "Konten terlalu panjang."}), 400
+        update_memory_data(item_id, question, answer)
+        audit_log("DATA_UPDATE", f"Updated Memory #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data memory berhasil diperbarui."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 15. Delete Memory Data - Admin
+@app.route('/api/memory-data/<string:item_id>', methods=['DELETE'])
+@require_admin
+@require_csrf
+def delete_memory_data_handler(item_id):
+    """Delete memory data by ID."""
+    if not is_valid_object_id(item_id):
+        return jsonify({"status": "error", "message": "ID tidak valid."}), 400
+    try:
+        delete_memory_data(item_id)
+        audit_log("DATA_DELETE", f"Deleted Memory #{item_id}", request)
+        return jsonify({"status": "success", "message": "Data memory berhasil dihapus."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/')
 def serve_index():

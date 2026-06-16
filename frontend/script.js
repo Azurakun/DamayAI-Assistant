@@ -170,12 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;">$1</strong>');
         formattedMessage = formattedMessage.replace(/\*(.*?)\*/g, '<em style="font-style:italic;">$1</em>');
 
-        // Image URL sanitization (only http/https)
+        // Image URL sanitization (only http/https) with error handling
         formattedMessage = formattedMessage.replace(/\[IMAGE:\s*(.*?)\s*\]/g, (match, imageUrl) => {
             const trimmedUrl = imageUrl.trim();
             if (!/^https?:\/\//i.test(trimmedUrl)) return '';
             return `<a href="${trimmedUrl}" target="_blank" rel="noopener noreferrer" style="display:block;max-width:20rem;margin:0.75rem auto;overflow:hidden;border-radius:0.5rem;border:1px solid var(--user-border-bubble);">
-                        <img src="${trimmedUrl}" alt="Gambar Referensi" style="width:100%;height:auto;display:block;">
+                        <img src="${trimmedUrl}" alt="Gambar Referensi" style="width:100%;height:auto;display:block;" onerror="this.parentElement.style.display='none'">
                     </a>`;
         });
 
@@ -228,9 +228,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function processCitations(htmlMessage) {
         const citations = [];
-        const regex = /\[CITE:\s*(.*?)\s*\|\s*(.*?)\s*\]/g;
-        const cleanedMessage = htmlMessage.replace(regex, (match, url, title) => {
+        // Match both [CITE: url | title] and [CITE: url] formats
+        const regexFull = /\[CITE:\s*(.*?)\s*\|\s*(.*?)\s*\]/g;
+        let cleanedMessage = htmlMessage.replace(regexFull, (match, url, title) => {
             citations.push({ url: url.trim(), title: title.trim() });
+            return '';
+        });
+        // Fallback: match [CITE: url] without title (use last URL segment as title)
+        const regexSimple = /\[CITE:\s*(.*?)\s*\]/g;
+        cleanedMessage = cleanedMessage.replace(regexSimple, (match, url) => {
+            const trimmedUrl = url.trim();
+            // Extract a readable title from the URL
+            let title = trimmedUrl;
+            try {
+                const pathname = new URL(trimmedUrl).pathname;
+                title = decodeURIComponent(pathname.split('/').filter(Boolean).pop() || trimmedUrl)
+                    .replace(/[-_]/g, ' ').replace(/\.[^.]+$/, '');
+                // Capitalize first letter
+                title = title.charAt(0).toUpperCase() + title.slice(1);
+            } catch(e) { /* not a valid URL, use as-is */ }
+            citations.push({ url: trimmedUrl, title: title });
             return '';
         });
         const uniqueCitations = citations.filter((value, index, self) => index === self.findIndex((t) => t.url === value.url));

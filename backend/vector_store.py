@@ -1,6 +1,6 @@
 import os
 import shutil
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from database import get_memory_documents_for_indexing, get_manual_documents_for_indexing, get_scraped_documents_for_indexing
@@ -9,7 +9,7 @@ from database import get_memory_documents_for_indexing, get_manual_documents_for
 FAISS_MEMORY_PATH = "db/faiss_index_memory"
 FAISS_MANUAL_PATH = "db/faiss_index_manual"
 FAISS_SCRAPED_PATH = "db/faiss_index_scraped"
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Tidak lagi memerlukan GEMINI_API_KEY karena menggunakan HuggingFaceEmbeddings lokal
 
 # --- FIX #4: Module-level cache so retrievers are loaded once, not per-request ---
 _cached_retrievers = None
@@ -48,11 +48,7 @@ def _create_specific_index(documents, index_path, data_name, embeddings):
 def create_vector_db():
     """Membuat atau memperbarui tiga vector store terpisah untuk semua tipe data."""
     global _cached_retrievers
-    if not GEMINI_API_KEY:
-        yield "ERROR: GEMINI_API_KEY tidak ditemukan. Proses dihentikan.\n"
-        return
-
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GEMINI_API_KEY)
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     # 1. Proses Indeks untuk Memory Bank
     yield "\n--- MEMPROSES MEMORY BANK ---\n"
@@ -86,11 +82,7 @@ def get_retrievers(k=2):
     if _cached_retrievers is not None:
         return _cached_retrievers
 
-    if not GEMINI_API_KEY:
-        print("ERROR: GEMINI_API_KEY tidak ditemukan.")
-        return None, None, None
-
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GEMINI_API_KEY)
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     
     retriever_memory, retriever_manual, retriever_scraped = None, None, None
 

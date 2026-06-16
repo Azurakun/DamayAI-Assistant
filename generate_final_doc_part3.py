@@ -1,0 +1,409 @@
+"""
+Part 3: Adds BAB III (Deskripsi Sistem), BAB IV (Eksperimen),
+BAB V (Penutup), and Daftar Pustaka.
+Run AFTER generate_final_doc_part2.py.
+"""
+from docx import Document
+from docx.shared import Pt, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+import os
+
+FILE = os.path.join(os.path.dirname(__file__), "DamayAI_Dokumen_PPA_Revised_Formatted.docx")
+doc = Document(FILE)
+
+# ── Helpers ──
+def add_heading_centered(text, bold=True, size=14):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(text)
+    run.bold = bold
+    run.font.size = Pt(size)
+    run.font.name = 'Times New Roman'
+    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_after = Pt(12)
+    return p
+
+def add_heading_left(text, bold=True, size=12):
+    p = doc.add_paragraph()
+    run = p.add_run(text)
+    run.bold = bold
+    run.font.size = Pt(size)
+    run.font.name = 'Times New Roman'
+    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_after = Pt(6)
+    return p
+
+def add_subheading_left(text, bold=True, size=12):
+    p = doc.add_paragraph()
+    run = p.add_run(text)
+    run.bold = bold
+    run.font.size = Pt(size)
+    run.font.name = 'Times New Roman'
+    p.paragraph_format.space_before = Pt(6)
+    p.paragraph_format.space_after = Pt(3)
+    p.paragraph_format.left_indent = Cm(0.5)
+    return p
+
+def add_body(text, indent=True, bold=False, italic=False):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    if indent:
+        p.paragraph_format.first_line_indent = Cm(1.27)
+    run = p.add_run(text)
+    run.bold = bold
+    run.italic = italic
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(12)
+    return p
+
+def add_body_no_indent(text, bold=False, italic=False):
+    return add_body(text, indent=False, bold=bold, italic=italic)
+
+def add_bullet(text):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.paragraph_format.left_indent = Cm(1.5)
+    p.paragraph_format.first_line_indent = Cm(-0.5)
+    run = p.add_run(f"•  {text}")
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(12)
+    return p
+
+def add_numbered_item(number, text):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.paragraph_format.left_indent = Cm(1.5)
+    p.paragraph_format.first_line_indent = Cm(-0.75)
+    run = p.add_run(f"{number}.\t{text}")
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(12)
+    return p
+
+def add_image_placeholder(caption, akses_disini=False):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if akses_disini:
+        run = p.add_run("[Gambar — Silakan masukkan gambar di sini]")
+    else:
+        run = p.add_run("[Gambar — Placeholder Screenshot]")
+    run.italic = True
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(11)
+    cap = doc.add_paragraph()
+    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r2 = cap.add_run(caption)
+    r2.bold = True
+    r2.font.name = 'Times New Roman'
+    r2.font.size = Pt(11)
+
+def add_table(headers, rows):
+    table = doc.add_table(rows=1 + len(rows), cols=len(headers))
+    table.style = 'Table Grid'
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, h in enumerate(headers):
+        cell = table.rows[0].cells[i]
+        cell.text = ''
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run(h)
+        run.bold = True
+        run.font.name = 'Times New Roman'
+        run.font.size = Pt(10)
+    for r_idx, row in enumerate(rows):
+        for c_idx, val in enumerate(row):
+            cell = table.rows[r_idx + 1].cells[c_idx]
+            cell.text = ''
+            p = cell.paragraphs[0]
+            run = p.add_run(str(val))
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(10)
+    return table
+
+
+# ═══════════════════════════════════════════
+# BAB III — DESKRIPSI SISTEM
+# ═══════════════════════════════════════════
+doc.add_page_break()
+add_heading_centered("BAB III\nDESKRIPSI SISTEM")
+
+# 3.1 Deskripsi Solusi
+add_heading_left("3.1  Deskripsi Solusi")
+
+add_body(
+    "Berdasarkan permasalahan yang telah diidentifikasi pada bab sebelumnya, proyek akhir "
+    "ini mengusulkan solusi berupa pengembangan DamayAI Assistant, sebuah chatbot asisten "
+    "virtual berbasis web yang mengimplementasikan pendekatan Tiered Retrieval-Augmented "
+    "Generation (Tiered RAG). Solusi ini dirancang secara khusus untuk menjawab tantangan "
+    "pengelolaan dan penyajian informasi di lingkungan SMKN 2 Indramayu, dengan memanfaatkan "
+    "teknologi kecerdasan buatan mutakhir agar mampu memberikan layanan informasi yang akurat, "
+    "cepat, dan selalu berbasis data terverifikasi."
+)
+
+add_body(
+    "Inti dari solusi yang ditawarkan adalah penerapan mekanisme Tiered RAG yang membagi "
+    "knowledge base menjadi tiga lapisan terstruktur dengan tingkat kepercayaan yang berbeda. "
+    "Lapisan pertama dan paling diprioritaskan adalah Memory Bank, yaitu kumpulan pasangan "
+    "pertanyaan-jawaban (Q&A) yang dikurasi secara manual oleh administrator sekolah dan "
+    "memiliki derajat kepercayaan tertinggi. Lapisan kedua adalah Data Manual, berupa dokumen "
+    "resmi sekolah yang diunggah dalam format PDF, DOCX, atau PPTX. Lapisan ketiga dan yang "
+    "memiliki prioritas terendah adalah Data Scraping, yang diperoleh secara otomatis melalui "
+    "proses web crawling pada website resmi SMKN 2 Indramayu."
+)
+
+add_body(
+    "Mekanisme prioritas Tiered RAG bekerja secara hierarkis sebagai berikut: ketika pengguna "
+    "mengajukan pertanyaan, sistem pertama-tama akan mencari jawaban di Memory Bank. Apabila "
+    "ditemukan kecocokan semantik yang memadai, jawaban dari Memory Bank langsung digunakan "
+    "tanpa perlu menelusuri lapisan di bawahnya. Jika tidak ditemukan kecocokan yang mencukupi, "
+    "pencarian dilanjutkan ke lapisan Data Manual. Apabila Data Manual pun tidak menghasilkan "
+    "hasil yang relevan, barulah sistem mencari di lapisan Data Scraping. Pendekatan bertingkat "
+    "ini memastikan bahwa jawaban yang paling terverifikasi dan tepercaya selalu diprioritaskan, "
+    "sekaligus meminimalkan risiko halusinasi AI yang dapat terjadi apabila LLM menghasilkan "
+    "jawaban tanpa dukungan data yang kuat."
+)
+
+add_body(
+    "Secara fungsional, DamayAI Assistant menyediakan dua antarmuka utama. Pertama, antarmuka "
+    "chatbot yang dapat diakses oleh pengguna umum (siswa, guru, dan masyarakat) melalui browser "
+    "tanpa perlu instalasi apapun, memungkinkan interaksi tanya-jawab secara real-time. Kedua, "
+    "antarmuka panel administrasi yang hanya dapat diakses oleh administrator terautentikasi, "
+    "berfungsi untuk mengelola seluruh knowledge base sistem, termasuk memperbarui data "
+    "scraping, mengunggah dokumen manual, mengkurasi Memory Bank, serta memantau log percakapan "
+    "dan laporan bug."
+)
+
+add_body(
+    "Keunggulan solusi DamayAI dibandingkan dengan penggunaan asisten AI umum seperti ChatGPT "
+    "terletak pada spesifisitas data yang digunakan. Seluruh jawaban yang dihasilkan DamayAI "
+    "didasarkan pada data resmi SMKN 2 Indramayu yang telah diverifikasi, bukan pada pengetahuan "
+    "umum yang mungkin tidak relevan atau tidak akurat untuk konteks sekolah ini. Selain itu, "
+    "sistem ini dirancang untuk dapat diperbarui secara berkala oleh administrator sekolah tanpa "
+    "memerlukan keahlian teknis khusus, sehingga informasi yang disajikan selalu mutakhir dan "
+    "relevan dengan kondisi terkini sekolah."
+)
+
+# 3.2 Desain Sistem
+add_heading_left("3.2  Desain Sistem")
+
+add_body(
+    "Desain sistem DamayAI Assistant dibangun berdasarkan prinsip modularitas dan pemisahan "
+    "tanggung jawab yang jelas antar komponen. Sistem ini dirancang agar setiap komponen dapat "
+    "berfungsi secara independen, memudahkan pemeliharaan, pengujian, dan pengembangan lebih "
+    "lanjut. Desain secara keseluruhan mencakup tiga aspek utama: arsitektur sistem, pemodelan "
+    "fungsi sistem, dan pemodelan data dan proses."
+)
+
+# 3.2.1 Arsitektur Sistem
+add_subheading_left("3.2.1  Arsitektur Sistem")
+
+add_body(
+    "Arsitektur sistem DamayAI mengadopsi pola three-tier architecture yang terdiri dari tiga "
+    "lapisan utama: Presentation Layer, Business Logic Layer, dan Data Access Layer. Pemisahan "
+    "tiga lapisan ini bertujuan agar perubahan pada satu lapisan tidak berdampak signifikan pada "
+    "lapisan lainnya, sehingga sistem lebih mudah dirawat dan dikembangkan secara berkelanjutan."
+)
+
+add_body(
+    "Presentation Layer merupakan lapisan terdepan yang bersentuhan langsung dengan pengguna, "
+    "berupa antarmuka web berbasis HTML/CSS/JavaScript yang dapat diakses melalui browser. "
+    "Lapisan ini menyediakan dua tampilan utama: (1) halaman chatbot untuk pengguna umum yang "
+    "menampilkan kolom percakapan, input pertanyaan, dan riwayat chat; serta (2) panel "
+    "administrasi untuk administrator yang menyediakan fitur pengelolaan knowledge base, "
+    "Memory Bank, dan pemantauan sistem."
+)
+
+add_body(
+    "Business Logic Layer ditangani sepenuhnya oleh Flask backend yang berjalan di server. "
+    "Lapisan ini bertanggung jawab atas seluruh logika pemrosesan, termasuk routing API, "
+    "autentikasi dan otorisasi administrator, orkestrasi alur Tiered RAG (embedding query, "
+    "pencarian FAISS, pemanggilan Gemini API), pengelolaan sesi percakapan, serta koordinasi "
+    "antara komponen-komponen sistem. Flask dipilih karena sifatnya yang ringan namun fleksibel, "
+    "memungkinkan integrasi seamless dengan library Python untuk AI dan NLP."
+)
+
+add_body(
+    "Data Access Layer mencakup seluruh komponen penyimpanan dan pengelolaan data, yaitu MongoDB "
+    "sebagai basis data dokumen utama dan FAISS sebagai vector store untuk pencarian semantik. "
+    "MongoDB menyimpan metadata dokumen, log percakapan, data pengguna administrator, entri "
+    "Memory Bank, serta data mentah dari proses scraping. FAISS menyimpan representasi vektor "
+    "(embedding) dari seluruh chunk teks yang telah diproses, memungkinkan pencarian "
+    "nearest-neighbor yang cepat dan efisien saat sistem perlu menemukan konteks yang relevan "
+    "untuk menjawab pertanyaan pengguna."
+)
+
+add_body(
+    "Alur kerja sistem secara end-to-end dapat dijelaskan sebagai berikut. Ketika pengguna "
+    "mengirimkan pertanyaan melalui antarmuka chatbot, request dikirim ke Flask backend melalui "
+    "REST API. Backend kemudian mengembedding pertanyaan menggunakan Google Embedding Model "
+    "(models/embedding-001) dan melakukan pencarian di FAISS berdasarkan mekanisme tiered "
+    "priority. Konteks yang berhasil di-retrieve digabungkan dengan pertanyaan asli dan system "
+    "prompt, kemudian dikirim ke Google Gemini API untuk menghasilkan respons. Jawaban yang "
+    "dihasilkan dikembalikan ke frontend dan ditampilkan kepada pengguna secara streaming untuk "
+    "pengalaman yang lebih responsif."
+)
+
+add_image_placeholder("Gambar 3.1  Desain Arsitektur Sistem (Akses Disini)", akses_disini=True)
+
+add_body(
+    "Alur pengumpulan dan pemrosesan data DamayAI melibatkan tiga sumber data utama yang "
+    "masing-masing melalui proses yang berbeda sebelum masuk ke knowledge base. Web "
+    "crawling/scraping mengekstraksi data dari website resmi sekolah, upload manual memproses "
+    "dokumen yang diunggah administrator, dan Memory Bank menyimpan pasangan Q&A yang dikurasi "
+    "langsung. Seluruh data kemudian disimpan di MongoDB, dipecah menjadi chunk, di-embed, dan "
+    "diindeks di FAISS untuk keperluan retrieval."
+)
+
+add_image_placeholder("Gambar 3.2  Alur Pengumpulan dan Pemrosesan Data DamayAI (Akses Disini)", akses_disini=True)
+
+# 3.2.2 Pemodelan Fungsi Sistem
+add_subheading_left("3.2.2  Pemodelan Fungsi Sistem")
+
+add_body(
+    "Pemodelan fungsi sistem DamayAI menggunakan Use Case Diagram untuk menggambarkan interaksi "
+    "antara aktor eksternal dengan fungsi-fungsi yang disediakan oleh sistem. Terdapat dua aktor "
+    "utama yang berinteraksi dengan DamayAI: Pengguna Umum dan Administrator."
+)
+
+add_body(
+    "Pengguna Umum mencakup siswa, guru, dan masyarakat yang mengakses chatbot tanpa melalui "
+    "proses autentikasi. Use case yang tersedia bagi Pengguna Umum meliputi: (1) Mengajukan "
+    "Pertanyaan—pengguna dapat mengetik pertanyaan seputar SMKN 2 Indramayu dan menerima jawaban "
+    "secara real-time; (2) Melihat Riwayat Chat—pengguna dapat mengakses kembali riwayat "
+    "percakapan dalam sesi yang sama; (3) Memulai Sesi Baru—pengguna dapat memulai percakapan "
+    "baru dengan konteks yang bersih; dan (4) Melaporkan Bug—pengguna dapat mengirimkan laporan "
+    "apabila menemukan kesalahan atau ketidakakuratan dalam jawaban sistem."
+)
+
+add_body(
+    "Administrator memiliki akses lebih luas dibandingkan Pengguna Umum, dengan terlebih dahulu "
+    "melalui proses autentikasi. Use case yang tersedia bagi Administrator meliputi: (1) Login "
+    "dan Logout—mengelola sesi autentikasi; (2) Mengelola Knowledge Base via Scraping—memulai, "
+    "memantau, dan menghapus data hasil web scraping; (3) Mengelola Knowledge Base via Upload "
+    "Manual—mengunggah dokumen resmi sekolah (PDF, DOCX, PPTX) dan menghapus dokumen yang sudah "
+    "tidak relevan; (4) Mengelola Memory Bank—menambah, mengubah, dan menghapus pasangan Q&A "
+    "yang dikurasi; (5) Melakukan Uji Coba AI—menguji respons chatbot secara langsung dari panel "
+    "admin beserta informasi sumber data yang digunakan; dan (6) Memantau Laporan Bug—melihat, "
+    "mengelola, dan menindaklanjuti laporan bug dari pengguna."
+)
+
+add_image_placeholder("Gambar 3.3  Use Case Diagram (Akses Disini)", akses_disini=True)
+
+# 3.2.3 Pemodelan Data dan Proses
+add_subheading_left("3.2.3  Pemodelan Data dan Proses")
+
+add_body(
+    "Pemodelan data dan proses sistem DamayAI menggunakan Data Flow Diagram (DFD) yang disusun "
+    "dalam dua tingkatan: DFD Level 0 (Diagram Konteks) dan DFD Level 1. DFD Level 0 "
+    "menggambarkan sistem DamayAI secara keseluruhan sebagai satu proses tunggal yang "
+    "berinteraksi dengan tiga entitas eksternal, yaitu Pengguna Umum, Administrator, dan Google "
+    "Gemini API sebagai layanan eksternal. Data store utama pada level ini adalah Knowledge "
+    "Base (MongoDB + FAISS) dan Log Percakapan."
+)
+
+add_image_placeholder("Gambar 3.4  DFD Level 0 (Akses Disini)", akses_disini=True)
+
+add_body(
+    "DFD Level 1 memecah proses utama sistem menjadi empat sub-proses yang saling berinteraksi. "
+    "Sub-proses pertama adalah Autentikasi, yang mengelola verifikasi identitas administrator "
+    "melalui pengecekan kredensial pada data store Pengguna Admin. Sub-proses kedua adalah "
+    "Knowledge Base Management, yang menangani seluruh operasi pengelolaan data meliputi proses "
+    "scraping website, pemrosesan dokumen yang diunggah, dan kurasi Memory Bank; semua data "
+    "yang telah diproses disimpan ke MongoDB dan di-embed ke FAISS. Sub-proses ketiga adalah "
+    "Inferensi & Retrieval, yang merupakan inti dari sistem Tiered RAG: menerima pertanyaan "
+    "pengguna, melakukan pencarian semantik bertingkat, memanggil Google Gemini API, dan "
+    "mengembalikan jawaban. Sub-proses keempat adalah Pelaporan Bug, yang mengelola pencatatan "
+    "dan pengelolaan laporan dari pengguna."
+)
+
+add_image_placeholder("Gambar 3.5  DFD Level 1 (Akses Disini)", akses_disini=True)
+
+add_body(
+    "Struktur data utama dalam sistem DamayAI yang tersimpan di MongoDB mencakup: (1) Koleksi "
+    "documents yang menyimpan metadata dan konten mentah dokumen hasil scraping dan upload "
+    "manual; (2) Koleksi memory_bank yang menyimpan pasangan Q&A yang telah dikurasi beserta "
+    "vektor embeddingnya; (3) Koleksi chat_sessions yang menyimpan log seluruh percakapan "
+    "pengguna dengan timestamp dan sumber data yang digunakan; (4) Koleksi admin_users yang "
+    "menyimpan data akun administrator dengan password yang telah di-hash; dan (5) Koleksi "
+    "bug_reports yang menyimpan laporan bug dari pengguna beserta status penangannya. Sementara "
+    "itu, FAISS menyimpan indeks vektor (IndexFlatL2) dari seluruh chunk teks yang berasal dari "
+    "ketiga sumber data, dengan metadata yang diperlukan untuk menelusuri kembali chunk ke "
+    "dokumen asalnya."
+)
+
+# 3.3 Spesifikasi Kebutuhan Sistem
+add_heading_left("3.3  Spesifikasi Kebutuhan Sistem")
+
+add_body(
+    "Spesifikasi kebutuhan sistem DamayAI mencakup dua kategori: kebutuhan fungsional dan "
+    "kebutuhan non-fungsional. Kebutuhan fungsional mendefinisikan apa yang harus dapat "
+    "dilakukan oleh sistem, sedangkan kebutuhan non-fungsional mendefinisikan kualitas dan "
+    "batasan teknis yang harus dipenuhi sistem dalam menjalankan fungsinya."
+)
+
+# 3.3.1 Kebutuhan Fungsional
+add_subheading_left("3.3.1  Kebutuhan Fungsional")
+
+add_body("Kebutuhan fungsional sistem DamayAI Assistant adalah sebagai berikut.")
+
+add_numbered_item(1,
+    "Sistem harus dapat menerima pertanyaan dalam bahasa Indonesia dari pengguna melalui "
+    "antarmuka web dan memberikan jawaban yang relevan secara real-time berdasarkan data "
+    "SMKN 2 Indramayu."
+)
+add_numbered_item(2,
+    "Sistem harus mengimplementasikan mekanisme Tiered RAG yang memprioritaskan sumber data "
+    "secara hierarkis: Memory Bank > Data Manual > Data Scraping."
+)
+add_numbered_item(3,
+    "Sistem harus menyediakan antarmuka panel admin yang memungkinkan administrator mengelola "
+    "data scraping, mengunggah dokumen manual, dan mengkurasi Memory Bank tanpa memerlukan "
+    "keahlian teknis pemrograman."
+)
+add_numbered_item(4,
+    "Sistem harus menerapkan autentikasi berbasis sesi untuk membatasi akses panel administrasi "
+    "hanya kepada pengguna yang terotorisasi."
+)
+add_numbered_item(5,
+    "Sistem harus mampu memproses dan mengindeks dokumen dalam format PDF, DOCX, dan PPTX "
+    "yang diunggah administrator secara otomatis ke dalam vector store FAISS."
+)
+add_numbered_item(6,
+    "Sistem harus menyimpan riwayat percakapan dan menyediakan fitur bagi pengguna untuk "
+    "memulai sesi percakapan baru kapan saja."
+)
+add_numbered_item(7,
+    "Sistem harus memberikan respons yang jelas ketika pertanyaan pengguna berada di luar "
+    "cakupan data yang tersedia di knowledge base."
+)
+
+# 3.3.2 Kebutuhan Non-Fungsional
+add_subheading_left("3.3.2  Kebutuhan Non-Fungsional")
+
+add_body("Kebutuhan non-fungsional sistem DamayAI Assistant mencakup aspek-aspek berikut.")
+
+add_bullet(
+    "Performa: sistem harus mampu menghasilkan respons chatbot dalam waktu tidak lebih dari "
+    "6 detik pada kondisi normal, dengan rata-rata waktu respons di bawah 5 detik."
+)
+add_bullet(
+    "Keamanan: sistem harus menerapkan mekanisme sanitasi input, perlindungan terhadap XSS "
+    "dan injection attack, pencegahan prompt injection, serta rate limiting untuk mencegah "
+    "penyalahgunaan."
+)
+add_bullet(
+    "Ketersediaan: sistem harus dapat diakses melalui browser modern (Chrome, Firefox, Edge) "
+    "tanpa instalasi plugin tambahan, dan responsif pada berbagai ukuran layar perangkat."
+)
+add_bullet(
+    "Skalabilitas: arsitektur sistem harus mendukung penambahan data knowledge base secara "
+    "bertahap tanpa memerlukan rekonfigurasi besar atau perubahan fundamental pada kode."
+)
+add_bullet(
+    "Kemudahan penggunaan: antarmuka chatbot harus intuitif dan mudah digunakan oleh pengguna "
+    "dari berbagai latar belakang, termasuk siswa yang baru pertama kali mengaksesnya."
+)
+
+# Save checkpoint
+doc.save(FILE)
+print("Part 3 complete: BAB III added.")

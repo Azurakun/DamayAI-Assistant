@@ -1,0 +1,3 @@
+- Requires environment variables: `SECRET_KEY`, `GROQ_API_KEY`, `MONGO_URI`, and optionally `ADMIN_PASSWORD` or `ADMIN_PASSWORD_HASH`.
+- Auto-reindexing: The app automatically checks for missing FAISS indexes on startup and rebuilds them if necessary.
+- File uploads are stored in `uploads/` and `bug_reports_uploads/` directories.

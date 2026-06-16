@@ -5,3 +5,16 @@
 2026-05-11 20:00:46 [AUDIT] [192.168.1.61] DATABASE_DELETE | All database collections dropped
 2026-05-11 20:01:13 [AUDIT] [192.168.1.61] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
 2026-05-11 20:02:12 [AUDIT] [192.168.1.61] REINDEX_START | FAISS reindexing initiated
+2026-05-12 16:39:24 [AUDIT] [192.168.1.61] LOGIN_SUCCESS | Admin logged in
+2026-05-12 16:39:35 [AUDIT] [192.168.1.61] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-05-12 16:58:36 [AUDIT] [192.168.1.61] DATABASE_DELETE | All database collections dropped
+2026-05-12 16:58:58 [AUDIT] [192.168.1.61] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-05-12 17:00:27 [AUDIT] [192.168.1.61] REINDEX_START | FAISS reindexing initiated
+2026-06-12 10:41:16 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:19:25 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:21:39 [AUDIT] [127.0.0.1] LOGOUT | Admin logged out
+2026-06-16 22:27:19 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:32:52 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:32:57 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:36:21 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-06-16 22:42:51 [AUDIT] [127.0.0.1] BUG_REPORT | New bug report submitted

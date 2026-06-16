@@ -1,0 +1,1 @@
+Vanilla JavaScript (ES6+), CSS3 (Glassmorphism, CSS Variables for theming), Web Speech API (TTS), Shadow DOM (for widget isolation).

@@ -1,0 +1,5 @@
+- State-changing API endpoints (POST, PUT, DELETE) require both admin authentication (`@require_admin`) and CSRF token validation (`@require_csrf`).
+- All user-provided text inputs are sanitized using `bleach.clean` to strip HTML tags before processing or storage.
+- MongoDB ObjectIDs passed in URL paths are validated using a custom `is_valid_object_id` helper to ensure they are 24-character hex strings.
+- Rate limiting is applied to public-facing and resource-intensive endpoints (chat, login, scraping) using `@limiter.limit` decorators.
+- Administrative actions (login, data updates, scraping) are logged to an audit trail using the `audit_log` helper function.

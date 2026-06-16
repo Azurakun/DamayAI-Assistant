@@ -1,0 +1,4 @@
+- LLM: Groq API with `llama-3.1-8b-instant`.
+- Vector DB: FAISS with `all-MiniLM-L6-v2` embeddings.
+- Database: MongoDB via `pymongo`.
+- Web Framework: Flask with `flask-limiter` for rate limiting.

@@ -1,0 +1,73 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+exported_at: "2026-06-12T08:40:08Z"
+modules:
+    "":
+        dir_name: DamayAI School Assistant Platform
+        title: DamayAI School Assistant Platform
+        scope:
+            - .gitignore
+            - Procfile
+            - requirements.txt
+            - API_DOCUMENTATION.md
+            - generate_api_excel.py
+            - .env
+            - API_Endpoints_DamayAI.xlsx
+            - Local Settings\app.py
+            - README.md
+            - audit.log
+            - backend\README.md
+            - backend\app.py
+            - backend\audit.log
+            - backend\bug_reports_uploads\business-model-canvas-uber-example.png
+            - backend\database.py
+            - backend\db\faiss_index_scraped\index.faiss
+            - backend\db\faiss_index_scraped\index.pkl
+            - backend\scraper.py
+            - backend\uploads\bugs\business-model-canvas-uber-example.png
+            - backend\urls_to_scrape.txt
+            - backend\vector_store.py
+            - frontend\admin-add-data.html
+            - frontend\admin-ai.html
+            - frontend\admin-bugs.html
+            - frontend\admin-data-bank.html
+            - frontend\admin-settings.html
+            - frontend\admin.css
+            - frontend\admin.html
+            - frontend\admin.js
+            - frontend\favicon.png
+            - frontend\index.html
+            - frontend\script.js
+            - frontend\style.css
+            - frontend\tutorial.html
+            - frontend\widget-preview.html
+            - frontend\widget.js
+            - uploads\bugs\7765784988230.mp4
+            - uploads\bugs\WEB.png
+            - uploads\bugs\business-model-canvas-uber-example.png
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    backend:
+        dir_name: DamayAI School Assistant Backend
+        title: DamayAI School Assistant Backend
+        scope:
+            - backend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend
+    frontend:
+        dir_name: DamayAI Chat & Admin Interface
+        title: DamayAI Chat & Admin Interface
+        scope:
+            - frontend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: backend

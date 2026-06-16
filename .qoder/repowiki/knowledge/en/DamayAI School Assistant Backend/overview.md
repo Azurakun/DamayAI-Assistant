@@ -1,0 +1,1 @@
+Flask-based backend for a school-specific AI assistant, providing RAG-powered chat, web scraping, and an admin dashboard for knowledge management.

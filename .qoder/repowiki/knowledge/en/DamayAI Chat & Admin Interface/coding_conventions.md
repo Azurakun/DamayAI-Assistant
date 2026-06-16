@@ -1,0 +1,3 @@
+- Implements immediate theme application via inline IIFE scripts in HTML headers to prevent flash-of-unstyled-content (FOUC) before external stylesheets load.
+- Uses CSS custom properties scoped to `[data-theme]` attributes on the `<html>` element to manage consistent light/dark mode transitions across all interfaces.
+- Centralizes API communication through custom fetch wrappers (`apiFetch` in admin, direct fetch in user script) that handle JSON serialization, error states, and CSRF header injection.

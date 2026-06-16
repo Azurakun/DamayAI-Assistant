@@ -1,0 +1,4 @@
+- **Dual-Entry Architecture**: Separates public user interaction (`index.html`, `script.js`) from administrative management (`admin.html`, `admin.js`), each with distinct styling (`style.css` vs `admin.css`).
+- **Embeddable Widget**: Implements a self-contained, Shadow DOM-isolated chat widget (`widget.js`) that auto-detects its server base URL for easy third-party integration.
+- **Client-Side Security & State**: Uses `sessionStorage` for optimistic UI rendering of the admin panel and implements CSRF token injection via a custom `apiFetch` wrapper in `admin.js`.
+- **Real-time Feedback**: Utilizes the Fetch API with `ReadableStream` in the admin dashboard to provide live console-style updates during long-running tasks like web crawling and FAISS index rebuilding.

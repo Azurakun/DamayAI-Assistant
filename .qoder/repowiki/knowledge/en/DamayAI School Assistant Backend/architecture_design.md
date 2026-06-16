@@ -1,0 +1,5 @@
+- Entry point: `app.py` defines a Flask application serving both API endpoints (`/api/*`) and static frontend files.
+- Data Layer: `database.py` manages MongoDB collections (scraped_data, manual_data, memory_bank, bug_reports) with unique indexes and CRUD operations.
+- Vector Search: `vector_store.py` uses LangChain and FAISS to create and query three separate vector indexes (Memory, Manual, Scraped) using HuggingFace embeddings.
+- Scraping Engine: `scraper.py` handles URL validation (SSRF protection), content extraction via `trafilatura`, and deep crawling logic.
+- Security & Middleware: Implements admin session authentication, CSRF token validation, rate limiting via `flask-limiter`, and input sanitization using `bleach`.

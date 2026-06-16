@@ -1,0 +1,1 @@
+Orchestrates a decoupled Flask backend and static frontend to deliver a RAG-powered AI assistant with admin-managed knowledge bases.

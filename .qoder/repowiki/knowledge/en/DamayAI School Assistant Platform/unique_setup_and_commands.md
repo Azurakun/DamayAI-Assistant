@@ -1,0 +1,2 @@
+- Deployment is driven by `Procfile` (`web: cd backend && gunicorn ...`).
+- Initial knowledge base population requires running `python scraper.py` in the backend directory before the first server start.

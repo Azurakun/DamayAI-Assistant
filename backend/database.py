@@ -190,7 +190,7 @@ def get_scraped_documents_for_indexing():
     for doc in cursor:
         image_info = f"URL Gambar Terkait: {doc.get('image_url')}" if doc.get('image_url') else "Tidak ada gambar terkait."
         page_content = f"Judul Halaman: {doc['title']}\nURL: {doc['url']}\n{image_info}\n\nKonten:\n{doc['content']}"
-        metadata = {"source": doc['url'], "title": doc['title'], "type": "Data Scrap"}
+        metadata = {"source": doc['url'], "title": doc['title'], "type": "Data Scrap", "image_url": doc.get('image_url', '')}
         documents.append(Document(page_content=page_content, metadata=metadata))
     return documents
 
@@ -221,3 +221,40 @@ def update_bug_report_status(report_id, status):
 def delete_bug_report(report_id):
     database = get_db()
     database.bug_reports.delete_one({"_id": ObjectId(report_id)})
+
+def get_bug_report_by_id(report_id):
+    database = get_db()
+    doc = database.bug_reports.find_one({"_id": ObjectId(report_id)})
+    return _format_doc(doc) if doc else None
+
+# --- DASHBOARD STATISTICS ---
+
+def get_dashboard_stats():
+    """Returns aggregate counts for dashboard."""
+    database = get_db()
+    return {
+        "scraped_count": database.scraped_data.count_documents({}),
+        "manual_count": database.manual_data.count_documents({}),
+        "memory_count": database.memory_bank.count_documents({}),
+        "bug_count": database.bug_reports.count_documents({}),
+        "bug_new": database.bug_reports.count_documents({"status": "Baru"}),
+        "bug_processing": database.bug_reports.count_documents({"status": "Sedang Diproses"}),
+        "bug_done": database.bug_reports.count_documents({"status": "Selesai"}),
+    }
+
+# --- SINGLE ITEM GETTERS ---
+
+def get_scraped_data_by_id(item_id):
+    database = get_db()
+    doc = database.scraped_data.find_one({"_id": ObjectId(item_id)})
+    return _format_doc(doc) if doc else None
+
+def get_manual_data_by_id(item_id):
+    database = get_db()
+    doc = database.manual_data.find_one({"_id": ObjectId(item_id)})
+    return _format_doc(doc) if doc else None
+
+def get_memory_data_by_id(item_id):
+    database = get_db()
+    doc = database.memory_bank.find_one({"_id": ObjectId(item_id)})
+    return _format_doc(doc) if doc else None

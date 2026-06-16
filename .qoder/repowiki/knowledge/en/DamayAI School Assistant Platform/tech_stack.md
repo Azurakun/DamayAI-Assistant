@@ -1,0 +1,1 @@
+Python/Flask backend served by Gunicorn, with a static HTML/CSS/JS frontend.

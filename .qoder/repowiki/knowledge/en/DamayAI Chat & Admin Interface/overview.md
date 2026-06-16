@@ -1,0 +1,1 @@
+Provides a glassmorphic user chat interface, an embeddable web widget, and a password-protected admin dashboard for managing AI knowledge bases and system operations.

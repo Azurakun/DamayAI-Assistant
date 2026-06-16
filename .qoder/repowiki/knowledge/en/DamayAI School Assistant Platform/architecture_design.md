@@ -1,0 +1,3 @@
+- The root acts as a deployment and configuration boundary, using a `Procfile` to launch the backend via Gunicorn while serving the frontend as static assets from the Flask app.
+- Shared environment variables (`.env`) and a unified `requirements.txt` enforce consistent dependency management and secret injection across the full stack.
+- Cross-cutting concerns like audit logging (`audit.log`) and API documentation are maintained at the root level, bridging the operational gap between the backend logic and frontend consumption.

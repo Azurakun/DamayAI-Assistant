@@ -113,12 +113,30 @@ def extract_single_page(url):
         if og_image and og_image.get('content'):
             primary_image_url = urljoin(url, og_image['content'])
 
-        # Priority 2: First <img> inside the extracted content body
-        if not primary_image_url and content:
-            content_soup = BeautifulSoup(content, 'html.parser')
-            first_img = content_soup.find('img')
-            if first_img and first_img.get('src'):
-                primary_image_url = urljoin(url, first_img['src'])
+        # Priority 2: First <img> inside the main content area of the RAW HTML
+        # (trafilatura strips images, so we must search the original HTML)
+        if not primary_image_url:
+            # Look in common content containers first
+            content_area = (
+                soup.find('article') or
+                soup.find('div', class_=re.compile(r'content|post|entry|berita|detail', re.I)) or
+                soup.find('div', id=re.compile(r'content|post|entry|berita|detail', re.I)) or
+                soup.find('main') or
+                soup.body
+            )
+            if content_area:
+                for img in content_area.find_all('img', src=True):
+                    src = img['src']
+                    # Skip tiny icons, logos, and tracking pixels
+                    width = img.get('width', '')
+                    height = img.get('height', '')
+                    if (width and width.isdigit() and int(width) < 50): continue
+                    if (height and height.isdigit() and int(height) < 50): continue
+                    # Skip common non-content images
+                    src_lower = src.lower()
+                    if any(skip in src_lower for skip in ['logo', 'icon', 'favicon', 'avatar', 'banner', 'pixel', 'tracking', 'spacer']): continue
+                    primary_image_url = urljoin(url, src)
+                    break
 
         if content:
             content = re.sub(r'\n\s*\n', '\n\n', content).strip()
@@ -225,11 +243,25 @@ def crawl_website(base_url, max_pages=50):
             og_image = soup.find('meta', property='og:image')
             if og_image and og_image.get('content'):
                 primary_image_url = urljoin(current_url, og_image['content'])
-            if not primary_image_url and content:
-                content_soup = BeautifulSoup(content, 'html.parser')
-                first_img = content_soup.find('img')
-                if first_img and first_img.get('src'):
-                    primary_image_url = urljoin(current_url, first_img['src'])
+            if not primary_image_url:
+                content_area = (
+                    soup.find('article') or
+                    soup.find('div', class_=re.compile(r'content|post|entry|berita|detail', re.I)) or
+                    soup.find('div', id=re.compile(r'content|post|entry|berita|detail', re.I)) or
+                    soup.find('main') or
+                    soup.body
+                )
+                if content_area:
+                    for img in content_area.find_all('img', src=True):
+                        src = img['src']
+                        width = img.get('width', '')
+                        height = img.get('height', '')
+                        if (width and width.isdigit() and int(width) < 50): continue
+                        if (height and height.isdigit() and int(height) < 50): continue
+                        src_lower = src.lower()
+                        if any(skip in src_lower for skip in ['logo', 'icon', 'favicon', 'avatar', 'banner', 'pixel', 'tracking', 'spacer']): continue
+                        primary_image_url = urljoin(current_url, src)
+                        break
 
             if content:
                 content = re.sub(r'\n\s*\n', '\n\n', content).strip()
