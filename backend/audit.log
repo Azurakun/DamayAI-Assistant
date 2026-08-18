@@ -18,3 +18,40 @@
 2026-06-16 22:32:57 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
 2026-06-16 22:36:21 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
 2026-06-16 22:42:51 [AUDIT] [127.0.0.1] BUG_REPORT | New bug report submitted
+2026-08-17 20:12:44 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-08-17 20:14:29 [AUDIT] [127.0.0.1] SCRAPE_START | URL scraping initiated
+2026-08-17 20:14:36 [AUDIT] [127.0.0.1] REINDEX_START | FAISS reindexing initiated
+2026-08-17 20:16:06 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-08-17 22:29:44 [AUDIT] [127.0.0.1] SCRAPE_START | URL scraping initiated
+2026-08-17 22:30:19 [AUDIT] [127.0.0.1] REINDEX_START | FAISS reindexing initiated
+2026-08-17 22:30:38 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-08-17 22:45:18 [AUDIT] [127.0.0.1] SCRAPE_START | URL scraping initiated
+2026-08-17 22:50:04 [AUDIT] [127.0.0.1] SCRAPE_START | URL scraping initiated
+2026-08-17 22:51:48 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-08-18 07:45:05 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-08-18 07:45:29 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/
+2026-08-18 08:06:07 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'PANDUAN_SELEKSI_GAPW.pptx'
+2026-08-18 08:06:26 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'Presentasi_Gerakan_membawa_bekal_sehat_dari_rumah.pdf'
+2026-08-18 08:06:35 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'Program_kerja_PHBS.docx'
+2026-08-18 08:06:42 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'Program_kerja_PMG.docx'
+2026-08-18 08:06:50 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'PROGRAM_KERJA.docx'
+2026-08-18 08:07:27 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/jurusan-detail.php?kode=NKPI
+2026-08-18 08:11:08 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/jurusan-detail.php?kode=TKJ
+2026-08-18 08:14:48 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/jurusan-detail.php?kode=TAB
+2026-08-18 08:16:38 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/jurusan-detail.php?kode=TAB
+2026-08-18 08:22:31 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 08:29:03 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 08:31:24 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 08:33:06 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 08:34:16 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/kontak.php
+2026-08-18 10:58:59 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-08-18 11:06:53 [AUDIT] [127.0.0.1] DATA_ADD_TEXT | Manual text added: 'Jurusan'
+2026-08-18 11:43:52 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-08-18 11:48:08 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 11:55:46 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 11:57:12 [AUDIT] [127.0.0.1] CRAWL_START | Deep crawl initiated for https://smkn2indramayu.sch.id/index.php
+2026-08-18 12:42:25 [AUDIT] [127.0.0.1] DATA_ADD_FILE | File added: 'Jadwal_per_kelas_edisi_22_juli_2024.pdf'
+2026-08-18 18:02:53 [AUDIT] [127.0.0.1] LOGIN_FAILED | Bad password attempt
+2026-08-18 18:02:55 [AUDIT] [127.0.0.1] LOGIN_SUCCESS | Admin logged in
+2026-08-18 18:10:17 [AUDIT] [127.0.0.1] DATA_ADD_TEXT | Manual text added: 'Contoh percakapan 1'
+2026-08-18 20:29:41 [AUDIT] [127.0.0.1] TOKEN_RESET | Total token akumulasi telah di-reset

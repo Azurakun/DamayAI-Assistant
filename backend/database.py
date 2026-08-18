@@ -93,13 +93,25 @@ def delete_manual_data(item_id):
     database = get_db()
     database.manual_data.delete_one({"_id": ObjectId(item_id)})
 
-def get_manual_documents_for_indexing():
+def get_manual_text_documents_for_indexing():
     database = get_db()
     documents = []
-    cursor = database.manual_data.find()
+    # Filter documents where file_path does not exist or is null
+    cursor = database.manual_data.find({"file_path": {"$exists": False}})
     for doc in cursor:
-        page_content = f"Judul Informasi Manual: {doc['title']}\n\nKonten:\n{doc['content']}"
-        metadata = {"source": doc['source_name'], "title": doc['title'], "type": "Data Manual"}
+        page_content = f"Judul Informasi Teks: {doc['title']}\n\nKonten:\n{doc['content']}"
+        metadata = {"source": doc['source_name'], "title": doc['title'], "type": "Data Teks"}
+        documents.append(Document(page_content=page_content, metadata=metadata))
+    return documents
+
+def get_document_documents_for_indexing():
+    database = get_db()
+    documents = []
+    # Filter documents where file_path exists
+    cursor = database.manual_data.find({"file_path": {"$exists": True}})
+    for doc in cursor:
+        page_content = f"Judul Dokumen: {doc['title']}\n\nIsi Dokumen:\n{doc['content']}"
+        metadata = {"source": doc['source_name'], "title": doc['title'], "type": "Data Dokumen"}
         documents.append(Document(page_content=page_content, metadata=metadata))
     return documents
 
@@ -241,6 +253,28 @@ def get_dashboard_stats():
         "bug_processing": database.bug_reports.count_documents({"status": "Sedang Diproses"}),
         "bug_done": database.bug_reports.count_documents({"status": "Selesai"}),
     }
+
+# --- SYSTEM STATS / TOKEN USAGE ---
+
+def add_token_usage(prompt, completion, total):
+    database = get_db()
+    database.system_stats.update_one(
+        {"_id": "token_usage"},
+        {"$inc": {"prompt": prompt, "completion": completion, "total": total, "requests": 1}},
+        upsert=True
+    )
+
+def get_token_usage():
+    database = get_db()
+    doc = database.system_stats.find_one({"_id": "token_usage"})
+    if doc:
+        return {
+            "prompt": doc.get("prompt", 0), 
+            "completion": doc.get("completion", 0), 
+            "total": doc.get("total", 0),
+            "requests": doc.get("requests", 0)
+        }
+    return {"prompt": 0, "completion": 0, "total": 0, "requests": 0}
 
 # --- SINGLE ITEM GETTERS ---
 
