@@ -1,4 +1,5 @@
 import requests
+import time
 import trafilatura
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -163,6 +164,7 @@ def scrape_from_file(file_path):
     yield {"status": "info", "message": f"Ditemukan {len(urls)} URL untuk di-scrape."}
 
     for url in urls:
+        time.sleep(4.5)  # Delay to prevent 429 Too Many Requests
         yield extract_single_page(url)
 
 def crawl_website(base_url, max_pages=50):
@@ -191,6 +193,7 @@ def crawl_website(base_url, max_pages=50):
             continue
             
         visited.add(current_url)
+        time.sleep(1.5)  # Delay to prevent 429 Too Many Requests
         yield {"status": "info", "message": f"[{len(visited)}/{max_pages}] Scrape: {current_url}"}
         
         # 1. Fetch the page to get links and content
@@ -275,4 +278,4 @@ def crawl_website(base_url, max_pages=50):
         except Exception as e:
             yield {"status": "error", "url": current_url, "reason": str(e), "image_url": None}
 
-    yield {"status": "info", "message": f"Crawl selesai. Total dikunjungi: {len(visited)} halaman."}
+    yield {"status": "info", "message": f"Crawl selesai. Total dikunjungi: {len(visited)} halaman."}

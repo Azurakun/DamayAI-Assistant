@@ -3,11 +3,12 @@ import shutil
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from database import get_memory_documents_for_indexing, get_manual_documents_for_indexing, get_scraped_documents_for_indexing
+from database import get_memory_documents_for_indexing, get_manual_text_documents_for_indexing, get_document_documents_for_indexing, get_scraped_documents_for_indexing
 
-# --- Konfigurasi Path untuk Tiga Indeks Terpisah ---
+# --- Konfigurasi Path untuk Empat Indeks Terpisah ---
 FAISS_MEMORY_PATH = "db/faiss_index_memory"
-FAISS_MANUAL_PATH = "db/faiss_index_manual"
+FAISS_MANUAL_TEXT_PATH = "db/faiss_index_manual_text"
+FAISS_DOCUMENT_PATH = "db/faiss_index_document"
 FAISS_SCRAPED_PATH = "db/faiss_index_scraped"
 # Tidak lagi memerlukan GEMINI_API_KEY karena menggunakan HuggingFaceEmbeddings lokal
 
@@ -55,12 +56,17 @@ def create_vector_db():
     memory_docs = get_memory_documents_for_indexing()
     yield from _create_specific_index(memory_docs, FAISS_MEMORY_PATH, "Memory Bank", embeddings)
 
-    # 2. Proses Indeks untuk Data Manual
-    yield "\n--- MEMPROSES DATA MANUAL ---\n"
-    manual_docs = get_manual_documents_for_indexing()
-    yield from _create_specific_index(manual_docs, FAISS_MANUAL_PATH, "Data Manual", embeddings)
+    # 2. Proses Indeks untuk Data Manual Teks
+    yield "\n--- MEMPROSES DATA TEKS MANUAL ---\n"
+    manual_text_docs = get_manual_text_documents_for_indexing()
+    yield from _create_specific_index(manual_text_docs, FAISS_MANUAL_TEXT_PATH, "Data Teks", embeddings)
 
-    # 3. Proses Indeks untuk Data Scraping
+    # 3. Proses Indeks untuk Data Dokumen
+    yield "\n--- MEMPROSES DATA DOKUMEN ---\n"
+    document_docs = get_document_documents_for_indexing()
+    yield from _create_specific_index(document_docs, FAISS_DOCUMENT_PATH, "Data Dokumen", embeddings)
+
+    # 4. Proses Indeks untuk Data Scraping
     yield "\n--- MEMPROSES DATA SCRAPING ---\n"
     scraped_docs = get_scraped_documents_for_indexing()
     yield from _create_specific_index(scraped_docs, FAISS_SCRAPED_PATH, "Data Scraping", embeddings)
@@ -70,8 +76,8 @@ def create_vector_db():
     yield "\nSemua proses indexing selesai.\n"
 
 
-def get_retrievers(k=2):
-    """Memuat semua indeks FAISS yang ada dan mengembalikannya sebagai tiga retriever terpisah.
+def get_retrievers(k=3): # Tingkatkan k=3 untuk ingatan lebih komprehensif
+    """Memuat semua indeks FAISS yang ada dan mengembalikannya sebagai empat retriever terpisah.
     
     FIX #4: Results are cached at module level. FAISS.load_local is called once,
     not on every chat request. Call invalidate_cache() to force a reload.
@@ -84,7 +90,7 @@ def get_retrievers(k=2):
 
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     
-    retriever_memory, retriever_manual, retriever_scraped = None, None, None
+    retriever_memory, retriever_manual_text, retriever_document, retriever_scraped = None, None, None, None
 
     # Muat Indeks Memory
     if os.path.exists(FAISS_MEMORY_PATH):
@@ -94,13 +100,21 @@ def get_retrievers(k=2):
         except Exception as e:
             print(f"Peringatan: Gagal memuat indeks Memory Bank: {e}")
 
-    # Muat Indeks Manual
-    if os.path.exists(FAISS_MANUAL_PATH):
+    # Muat Indeks Manual Text
+    if os.path.exists(FAISS_MANUAL_TEXT_PATH):
         try:
-            db_manual = FAISS.load_local(FAISS_MANUAL_PATH, embeddings, allow_dangerous_deserialization=True)
-            retriever_manual = db_manual.as_retriever(search_kwargs={"k": k})
+            db_manual_text = FAISS.load_local(FAISS_MANUAL_TEXT_PATH, embeddings, allow_dangerous_deserialization=True)
+            retriever_manual_text = db_manual_text.as_retriever(search_kwargs={"k": k})
         except Exception as e:
-            print(f"Peringatan: Gagal memuat indeks Data Manual: {e}")
+            print(f"Peringatan: Gagal memuat indeks Data Teks: {e}")
+
+    # Muat Indeks Dokumen
+    if os.path.exists(FAISS_DOCUMENT_PATH):
+        try:
+            db_document = FAISS.load_local(FAISS_DOCUMENT_PATH, embeddings, allow_dangerous_deserialization=True)
+            retriever_document = db_document.as_retriever(search_kwargs={"k": k})
+        except Exception as e:
+            print(f"Peringatan: Gagal memuat indeks Data Dokumen: {e}")
             
     # Muat Indeks Scraped
     if os.path.exists(FAISS_SCRAPED_PATH):
@@ -111,5 +125,5 @@ def get_retrievers(k=2):
             print(f"Peringatan: Gagal memuat indeks Data Scraping: {e}")
     
     # Cache the result
-    _cached_retrievers = (retriever_memory, retriever_manual, retriever_scraped)
+    _cached_retrievers = (retriever_memory, retriever_manual_text, retriever_document, retriever_scraped)
     return _cached_retrievers

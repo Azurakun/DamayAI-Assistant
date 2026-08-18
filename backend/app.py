@@ -10,15 +10,16 @@ from groq import Groq
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory, session
 from functools import wraps
 from dotenv import load_dotenv
+import google.generativeai as genai
 from scraper import scrape_from_file, extract_text_from_pdf, extract_text_from_pptx, crawl_website
 from vector_store import create_vector_db, get_retrievers, invalidate_cache
 from database import (
-    init_db, add_scraped_data, get_all_scraped_data, update_scraped_data, delete_scraped_data,
-    add_to_memory, get_all_memory_data, update_memory_data, delete_memory_data,
-    add_manual_data, get_all_manual_data, update_manual_data, delete_manual_data,
+    init_db,
+    add_scraped_data, get_all_scraped_data, delete_scraped_data, get_scraped_data_by_id, update_scraped_data,
+    add_manual_data, get_all_manual_data, delete_manual_data, get_manual_data_by_id, update_manual_data,
+    add_to_memory, get_all_memory_data, delete_memory_data, get_memory_data_by_id, update_memory_data,
     add_bug_report, get_all_bug_reports, update_bug_report_status, delete_bug_report,
-    get_db, get_dashboard_stats, get_scraped_data_by_id, get_manual_data_by_id, 
-    get_memory_data_by_id, get_bug_report_by_id
+    get_dashboard_stats, add_token_usage, get_token_usage, get_bug_report_by_id, get_db
 )
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -64,10 +65,18 @@ if not SECRET_KEY:
     print("Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
     sys.exit(1)
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-pro")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("WARNING: GEMINI_API_KEY environment variable is not set. Using hardcoded key (not recommended for production).")
+    genai.configure(api_key="")
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("WARNING: GROQ_API_KEY environment variable is not set.")
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads')
 os.makedirs(os.path.join(UPLOADS_DIR, 'bugs'), exist_ok=True)
@@ -613,7 +622,7 @@ def generate_response(user_query, history):
         
     yield {"step": "start", "data": f"Menerima pertanyaan: '{user_query}'"}
 
-    retriever_memory, retriever_manual, retriever_scraped = get_retrievers()
+    retriever_memory, retriever_manual_text, retriever_document, retriever_scraped = get_retrievers()
     
     retrieved_knowledge = []
 
@@ -636,26 +645,45 @@ def generate_response(user_query, history):
         except Exception as e:
             yield {"step": "error", "data": f"Error saat mencari di Memory Bank: {e}"}
 
-    # TAHAP 2: Cari di Data Manual 
-    yield {"step": "manual_search", "data": "Mencari di Data Manual..."}
-    if retriever_manual:
+    # TAHAP 2: Cari di Data Manual Teks
+    yield {"step": "manual_search", "data": "Mencari di Data Manual (Teks)..."}
+    if retriever_manual_text:
         try:
-            docs = retriever_manual.invoke(user_query)
+            docs = retriever_manual_text.invoke(user_query)
             if docs:
-                yield {"step": "manual_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Manual."}
+                yield {"step": "manual_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Manual (Teks)."}
                 for doc in docs:
                      retrieved_knowledge.append({
-                        "source_type": "Data Manual",
+                        "source_type": "Data Teks Manual",
                         "title": doc.metadata.get('title', 'Unknown'),
-                        "source": doc.metadata.get('source', 'Manual Upload'),
+                        "source": doc.metadata.get('source', 'Manual Text'),
                         "content": doc.page_content
                     })
             else:
-                yield {"step": "manual_not_found", "data": "Tidak ada yang cocok di Data Manual."}
+                yield {"step": "manual_not_found", "data": "Tidak ada yang cocok di Data Manual (Teks)."}
         except Exception as e:
-            yield {"step": "error", "data": f"Error saat mencari di Data Manual: {e}"}
+            yield {"step": "error", "data": f"Error saat mencari di Data Manual (Teks): {e}"}
 
-    # TAHAP 3: Cari di Data Scraping
+    # TAHAP 3: Cari di Data Dokumen (File Upload)
+    yield {"step": "document_search", "data": "Mencari di Data Dokumen..."}
+    if retriever_document:
+        try:
+            docs = retriever_document.invoke(user_query)
+            if docs:
+                yield {"step": "document_found", "data": f"{len(docs)} dokumen relevan ditemukan di Data Dokumen."}
+                for doc in docs:
+                     retrieved_knowledge.append({
+                        "source_type": "Data Dokumen",
+                        "title": doc.metadata.get('title', 'Unknown'),
+                        "source": doc.metadata.get('source', 'Document Upload'),
+                        "content": doc.page_content
+                    })
+            else:
+                yield {"step": "document_not_found", "data": "Tidak ada yang cocok di Data Dokumen."}
+        except Exception as e:
+            yield {"step": "error", "data": f"Error saat mencari di Data Dokumen: {e}"}
+
+    # TAHAP 4: Cari di Data Scraping
     yield {"step": "scrape_search", "data": "Mencari di Data Scraping..."}
     if retriever_scraped:
         try:
@@ -707,6 +735,17 @@ def generate_response(user_query, history):
         - **Grounding Wajib**: JIKA pengguna bertanya tentang fakta, info sekolah, atau data teknis, Anda WAJIB menggunakan "DATA PENDUKUNG" di bawah.
         - **Inferensi Logis (Reasoning)**: Jika informasi tidak tertulis secara eksplisit, lakukan penalaran logis dari konteks secara DIAM-DIAM. Langsung sampaikan hasilnya tanpa menjelaskan proses berpikirnya.
         - **Jujur**: Jika data benar-benar tidak ada atau tidak bisa disimpulkan dari context, katakan belum tahu, tapi tetaplah ramah.
+        # Hierarki Prioritas RAG (WAJIB DIIKUTI!):
+        # Jika ada konflik informasi pada "DATA PENDUKUNG", percaya data dengan urutan prioritas berikut:
+        # 1. Memory Bank (Prioritas Tertinggi, Paling Akurat)
+        # 2. Data Teks Manual
+        # 3. Data Dokumen (File Upload)
+        # 4. Website Scraping (Prioritas Terendah)
+        
+        # Anti-Halusinasi:
+        # - JIKA informasi yang diminta TIDAK ADA di "DATA PENDUKUNG", JANGAN MENGARANG JAWABAN.
+        # - Anda BOLEH mengobrol santai (small talk) jika pengguna hanya menyapa.
+        # - JIKA pengguna bertanya spesifik tentang sekolah/informasi, WAJIB menggunakan data pendukung.
 
         # Aturan Sitasi (PENTING!)
         Agar pengguna bisa melihat sumber data, ikuti aturan ini saat mengambil fakta dari "DATA PENDUKUNG":
@@ -722,7 +761,7 @@ def generate_response(user_query, history):
         3. **Gambar (PENTING)**: Jika dokumen DATA PENDUKUNG memiliki field `[Gambar]` dengan URL gambar, Anda WAJIB menyertakan gambar tersebut dalam jawaban menggunakan tag `[IMAGE: url_gambar]`. Terutama jika pengguna bertanya tentang kegiatan, suasana, atau hal visual lainnya. Sertakan gambar secara proaktif untuk memperkaya jawaban, jangan hanya jika diminta.
 
         ---
-        # DATA PENDUKUNG (Gunakan ini untuk fakta)
+        # DATA PENDUKUNG (Gunakan ini untuk fakta, perhatikan Tipe data untuk prioritas)
         {context_str if context_str else "Tidak ada data spesifik ditemukan. Gunakan pengetahuan umum hanya untuk sapaan/obrolan ringan."}
         
         # PERCAKAPAN
@@ -739,21 +778,70 @@ def generate_response(user_query, history):
         Jawaban (Ingat tag [CITE:...] jika menggunakan data):
         """
         
-        messages = []
-        for msg in history:
-            role = "user" if msg['role'] == "user" else "assistant"
-            content = " ".join([part['text'] for part in msg.get('parts', [])])
-            messages.append({"role": role, "content": content})
+        if GEMINI_API_KEY:
+            gemini_model = genai.GenerativeModel(
+                GEMINI_MODEL,
+                generation_config={
+                    "temperature": 0.7,
+                    "max_output_tokens": 2048,
+                }
+            )
             
-        messages.append({"role": "user", "content": final_prompt_text})
-        
-        chat_completion = client.chat.completions.create(
-            messages=messages,
-            model="llama-3.1-8b-instant",
-            temperature=0.7,
-            max_tokens=2048
-        )
-        final_response_text = chat_completion.choices[0].message.content
+            gemini_history = []
+            for msg in history:
+                role = "user" if msg['role'] == "user" else "model"
+                content = " ".join([part['text'] for part in msg.get('parts', [])])
+                gemini_history.append({"role": role, "parts": [content]})
+            
+            chat_session = gemini_model.start_chat(history=gemini_history)
+            response = chat_session.send_message(final_prompt_text)
+            final_response_text = response.text
+            try:
+                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                    p = response.usage_metadata.prompt_token_count
+                    c = response.usage_metadata.candidates_token_count
+                    t = response.usage_metadata.total_token_count
+                    add_token_usage(p, c, t)
+                    yield {"step": "token_usage", "data": {
+                        "prompt": p,
+                        "completion": c,
+                        "total": t,
+                        "model": GEMINI_MODEL
+                    }}
+            except Exception as e:
+                pass
+        elif client:
+            messages = []
+            for msg in history:
+                role = "user" if msg['role'] == "user" else "assistant"
+                content = " ".join([part['text'] for part in msg.get('parts', [])])
+                messages.append({"role": role, "content": content})
+                
+            messages.append({"role": "user", "content": final_prompt_text})
+            
+            chat_completion = client.chat.completions.create(
+                messages=messages,
+                model="llama-3.1-8b-instant",
+                temperature=0.7,
+                max_tokens=2048
+            )
+            final_response_text = chat_completion.choices[0].message.content
+            try:
+                if hasattr(chat_completion, 'usage') and chat_completion.usage:
+                    p = chat_completion.usage.prompt_tokens
+                    c = chat_completion.usage.completion_tokens
+                    t = chat_completion.usage.total_tokens
+                    add_token_usage(p, c, t)
+                    yield {"step": "token_usage", "data": {
+                        "prompt": p,
+                        "completion": c,
+                        "total": t,
+                        "model": "llama-3.1-8b-instant"
+                    }}
+            except Exception as e:
+                pass
+        else:
+            raise Exception("API Key untuk Gemini atau Groq tidak ditemukan. Harap setel GEMINI_API_KEY atau GROQ_API_KEY di .env")
         
         yield {"step": "final_answer", "data": final_response_text}
     except Exception as e:
@@ -804,7 +892,7 @@ def delete_db_handler():
 @limiter.limit("1 per minute")  # [H1] Rate limit scraping
 def scrape_handler():
     def generate_logs():
-        urls_file = 'urls_to_scrape.txt'
+        urls_file = 'urls_scrape.txt'
         yield f"Membaca file '{urls_file}'...\n"
         for result in scrape_from_file(urls_file):
             status = result.get('status')
@@ -871,7 +959,7 @@ def get_data_handler():
         all_data.append(item)
         
     for item in manual:
-        item['type'] = 'Manual'
+        item['type'] = 'Dokumen' if item.get('file_path') else 'Teks'
         item['timestamp'] = item.get('added_at')
         item['url'] = item.get('source_name')
         all_data.append(item)
@@ -887,6 +975,12 @@ def get_data_handler():
     all_data_sorted = sorted(all_data, key=lambda x: x.get('timestamp') or datetime.datetime.min, reverse=True)
     return jsonify(all_data_sorted)
 
+@app.route('/api/admin/token-stats', methods=['GET'])
+@require_admin
+def token_stats_handler():
+    stats = get_token_usage()
+    return jsonify({"status": "success", "data": stats})
+
 @app.route('/api/data/<string:type>/<string:item_id>', methods=['PUT', 'DELETE'])
 @require_admin
 @require_csrf
@@ -897,7 +991,7 @@ def update_delete_data_handler(type, item_id):
             return jsonify({"status": "error", "message": "ID data tidak valid."}), 400
         
         # Validate type
-        if type not in ('Scrap', 'Manual', 'Memory'):
+        if type not in ('Scrap', 'Teks', 'Dokumen', 'Memory'):
             return jsonify({"status": "error", "message": "Tipe data tidak valid."}), 400
         
         if request.method == 'PUT':
@@ -911,7 +1005,7 @@ def update_delete_data_handler(type, item_id):
             
             if type == 'Scrap':
                 update_scraped_data(item_id, new_title, new_content)
-            elif type == 'Manual':
+            elif type in ('Teks', 'Dokumen'):
                 update_manual_data(item_id, new_title, new_content)
             elif type == 'Memory':
                 update_memory_data(item_id, new_title, new_content)
@@ -922,7 +1016,7 @@ def update_delete_data_handler(type, item_id):
         elif request.method == 'DELETE':
             if type == 'Scrap':
                 delete_scraped_data(item_id)
-            elif type == 'Manual':
+            elif type in ('Teks', 'Dokumen'):
                 delete_manual_data(item_id)
             elif type == 'Memory':
                 delete_memory_data(item_id)
