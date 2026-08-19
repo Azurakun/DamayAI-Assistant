@@ -65,6 +65,39 @@ if not SECRET_KEY:
     print("Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
     sys.exit(1)
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
+GEMINI_THINKING_LEVEL = os.getenv("GEMINI_THINKING_LEVEL", "MEDIUM").upper()
+GCP_PROJECT = os.getenv("GCP_PROJECT")
+GCP_LOCATION = os.getenv("GCP_LOCATION", "global")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+if GOOGLE_APPLICATION_CREDENTIALS:
+    if not os.path.isabs(GOOGLE_APPLICATION_CREDENTIALS):
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), '..', GOOGLE_APPLICATION_CREDENTIALS),
+            os.path.join(os.path.dirname(__file__), GOOGLE_APPLICATION_CREDENTIALS)
+        ]
+        for p in possible_paths:
+            if os.path.exists(p):
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.abspath(p)
+                break
+
+USE_VERTEX = False
+vertex_client = None
+if GCP_PROJECT:
+    try:
+        from google import genai as google_genai
+        vertex_client = google_genai.Client(vertexai=True, project=GCP_PROJECT, location=GCP_LOCATION)
+        USE_VERTEX = True
+        print(f"Vertex AI initialized for project '{GCP_PROJECT}' in region '{GCP_LOCATION}'")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Vertex AI client: {e}")
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+elif not USE_VERTEX:
+    print("WARNING: Neither GEMINI_API_KEY nor GCP_PROJECT is configured properly.")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("WARNING: GROQ_API_KEY environment variable is not set.")
@@ -770,7 +803,44 @@ def generate_response(user_query, history):
         Jawaban (Ingat tag [CITE:...] jika menggunakan data):
         """
         
-        if GEMINI_API_KEY:
+        if USE_VERTEX and vertex_client:
+            history_contents = []
+            for msg in history:
+                role = "user" if msg['role'] == "user" else "model"
+                content = " ".join([part['text'] for part in msg.get('parts', [])])
+                history_contents.append({"role": role, "parts": [{"text": content}]})
+            
+            from google.genai import types as genai_types
+            
+            gen_config = genai_types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=2048,
+            )
+            if GEMINI_THINKING_LEVEL in ["LOW", "MEDIUM", "HIGH"]:
+                gen_config.thinking_config = genai_types.ThinkingConfig(thinking_level=GEMINI_THINKING_LEVEL)
+
+            chat = vertex_client.chats.create(
+                model=GEMINI_MODEL,
+                history=history_contents,
+                config=gen_config
+            )
+            response = chat.send_message(final_prompt_text)
+            final_response_text = response.text
+            try:
+                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                    p = getattr(response.usage_metadata, 'prompt_token_count', 0)
+                    c = getattr(response.usage_metadata, 'candidates_token_count', 0)
+                    t = getattr(response.usage_metadata, 'total_token_count', 0)
+                    add_token_usage(p, c, t)
+                    yield {"step": "token_usage", "data": {
+                        "prompt": p,
+                        "completion": c,
+                        "total": t,
+                        "model": GEMINI_MODEL
+                    }}
+            except Exception as e:
+                pass
+        elif GEMINI_API_KEY:
             gemini_model = genai.GenerativeModel(
                 GEMINI_MODEL,
                 generation_config={
