@@ -433,7 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const typeClasses = {
             'Scrap': 'type-scrap',
-            'Manual': 'type-manual',
+            'Teks': 'type-manual',
+            'Dokumen': 'type-manual',
             'Memory': 'type-memory'
         };
 
@@ -1002,6 +1003,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p style="color:var(--text-muted);font-size:0.75rem;font-style:italic;">"${doc.content}"</p>
                 </div>`;
             }).join('');
+        } else if (thought.step === 'token_usage') {
+            const tw = document.getElementById('token-monitor-widget');
+            if (tw) {
+                tw.style.display = 'block';
+                document.getElementById('token-model').innerText = thought.data.model || '-';
+                document.getElementById('token-prompt').innerText = thought.data.prompt || 0;
+                document.getElementById('token-completion').innerText = thought.data.completion || 0;
+                document.getElementById('token-total').innerText = thought.data.total || 0;
+            }
         } else if (thought.step === 'final_answer') {
             html = `<div style="margin-top:1rem;padding:0.75rem;background:var(--bg-card-inner);border-radius:0.5rem;border:1px solid var(--border-card);">
                         <p style="color:#4ade80;font-weight:700;margin-bottom:0.5rem;">Jawaban Akhir (Bisa Diedit):</p>
@@ -1024,6 +1034,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             adminChatHistory.push({ role: "user", parts: [{ text: userQuery }] });
             thinkingConsole.innerHTML = '';
+            const tw = document.getElementById('token-monitor-widget');
+            if (tw) tw.style.display = 'none';
             adminChatSubmit.disabled = true;
             adminChatSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menganalisis...';
             thinkingConsole.dataset.question = userQuery;
@@ -1105,4 +1117,55 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // --- Global Token Stats (Admin Settings) ---
+    const globalTokenCost = document.getElementById('global-token-cost');
+    const globalTokenRequests = document.getElementById('global-token-requests');
+    const globalTokenPrompt = document.getElementById('global-token-prompt');
+    const globalTokenCompletion = document.getElementById('global-token-completion');
+    const globalTokenTotal = document.getElementById('global-token-total');
+    const refreshTokenStatsBtn = document.getElementById('refresh-token-stats-btn');
+
+    async function loadGlobalTokenStats() {
+        if (!globalTokenTotal) return;
+        try {
+            const response = await apiFetch('/api/admin/token-stats');
+            const result = await response.json();
+            if (result.status === 'success') {
+                const promptCount = result.data.prompt || 0;
+                const completionCount = result.data.completion || 0;
+
+                // Model pricing: gemini-3.1-pro ($2.00 / 1M prompt, $12.00 / 1M completion)
+                const costPrompt = (promptCount / 1000000) * 2.00;
+                const costCompletion = (completionCount / 1000000) * 12.00;
+                const totalCost = costPrompt + costCompletion;
+
+                if (globalTokenCost) {
+                    globalTokenCost.textContent = `$${totalCost.toFixed(6)}`;
+                }
+
+                if (globalTokenRequests) globalTokenRequests.textContent = result.data.requests.toLocaleString();
+                globalTokenPrompt.textContent = promptCount.toLocaleString();
+                globalTokenCompletion.textContent = completionCount.toLocaleString();
+                globalTokenTotal.textContent = result.data.total.toLocaleString();
+            }
+        } catch (error) {
+            console.error("Gagal memuat token stats:", error);
+        }
+    }
+
+    if (globalTokenTotal) {
+        loadGlobalTokenStats();
+    }
+    
+    if (refreshTokenStatsBtn) {
+        refreshTokenStatsBtn.addEventListener('click', () => {
+            const icon = refreshTokenStatsBtn.querySelector('i');
+            if(icon) icon.classList.add('fa-spin');
+            loadGlobalTokenStats().finally(() => {
+                setTimeout(() => { if(icon) icon.classList.remove('fa-spin'); }, 500);
+            });
+        });
+    }
+
 });

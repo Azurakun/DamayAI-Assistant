@@ -65,14 +65,6 @@ if not SECRET_KEY:
     print("Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
     sys.exit(1)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-pro")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
-    print("WARNING: GEMINI_API_KEY environment variable is not set. Using hardcoded key (not recommended for production).")
-    genai.configure(api_key="")
-
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     print("WARNING: GROQ_API_KEY environment variable is not set.")

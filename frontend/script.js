@@ -3,7 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const chatContainer = document.getElementById('chat-container');
     const sendBtn = document.getElementById('send-btn');
-    const newChatBtn = document.getElementById('new-chat-btn');
+    const devCreditsBtn = document.getElementById('dev-credits-btn');
+    const devCreditsModal = document.getElementById('dev-credits-modal');
+    const closeCreditsBtn = document.getElementById('close-credits-btn');
     const chatArea = document.getElementById('chat-area');
     const bugReportBtn = document.getElementById('bug-report-btn');
     const bugReportModal = document.getElementById('bug-report-modal');
@@ -14,8 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastUserMessage = '';
     let chatHistory = [];
-    let isSpeaking = false;
-    let currentSpeech = null;
 
     // ============================================================
     //  THEME
@@ -60,20 +60,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     //  CHAT
     // ============================================================
-    const startNewChat = () => {
-        chatHistory = [];
-        if (currentSpeech) window.speechSynthesis.cancel();
-        isSpeaking = false;
-        chatContainer.innerHTML = `
-            <div style="${STYLES.chatWrapper}${STYLES.aiWrapper}">
-                <div style="display:flex;gap:0.5rem;width:100%;max-width:48rem;">
-                    <div style="${STYLES.avatarBase}${STYLES.avatarAi}"><i class="fas fa-robot"></i></div>
-                    <div style="${STYLES.bubbleBase}${STYLES.bubbleAi}">
-                        <p style="font-weight:500;margin:0;">Halo! Saya DamayAI, asisten virtual SMKN 2 Indramayu. Apa saja yang ingin Anda ketahui tentang sekolah kami?</p>
-                    </div>
+    chatHistory = [];
+    chatContainer.innerHTML = `
+        <div style="${STYLES.chatWrapper}${STYLES.aiWrapper}">
+            <div style="display:flex;gap:0.5rem;width:100%;max-width:48rem;">
+                <div style="${STYLES.avatarBase}${STYLES.avatarAi}"><i class="fas fa-robot"></i></div>
+                <div style="${STYLES.bubbleBase}${STYLES.bubbleAi}">
+                    <p style="font-weight:500;margin:0;">Halo! Saya DamayAI, asisten virtual SMKN 2 Indramayu. Apa saja yang ingin Anda ketahui tentang sekolah kami?</p>
                 </div>
-            </div>`;
-    };
+            </div>
+        </div>`;
 
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -109,9 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleInput(false);
         }
     });
-
-    newChatBtn.addEventListener('click', startNewChat);
-
+    devCreditsBtn.addEventListener('click', () => { devCreditsModal.style.display = 'flex'; });
+    closeCreditsBtn.addEventListener('click', () => { devCreditsModal.style.display = 'none'; });
     bugReportBtn.addEventListener('click', () => { bugReportModal.style.display = 'flex'; });
     closeBugReportModalBtn.addEventListener('click', () => { bugReportModal.style.display = 'none'; });
 
@@ -291,12 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 chipsHtml += '</div>';
             }
 
-            // Action buttons
             const actionButtonsHtml = `
                 <div class="action-buttons" style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--user-border-bubble);display:flex;gap:0.25rem;justify-content:flex-end;opacity:0.4;transition:opacity 0.3s;">
-                    <button class="action-btn tts-btn" style="border:none;background:none;padding:0.375rem;border-radius:9999px;color:var(--user-text-muted);cursor:pointer;font-size:0.8rem;" title="Dengarkan"><i class="fas fa-volume-up"></i></button>
                     <button class="action-btn copy-btn" style="border:none;background:none;padding:0.375rem;border-radius:9999px;color:var(--user-text-muted);cursor:pointer;font-size:0.8rem;" title="Salin"><i class="fas fa-copy"></i></button>
-                    <button class="action-btn regen-btn" style="border:none;background:none;padding:0.375rem;border-radius:9999px;color:var(--user-text-muted);cursor:pointer;font-size:0.8rem;" title="Regenerate"><i class="fas fa-sync-alt"></i></button>
                 </div>`;
 
             messageWrapper.style.cssText = STYLES.chatWrapper + STYLES.aiWrapper;
@@ -328,13 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Attach listeners
         if (sender !== 'user' && !isError) {
             const cleanText = message.replace(/\[CITE:.*?\]/g, '').replace(/\*\*/g, '').replace(/###/g, '').trim();
-            const ttsBtn = messageWrapper.querySelector('.tts-btn');
             const copyBtn = messageWrapper.querySelector('.copy-btn');
-            const regenBtn = messageWrapper.querySelector('.regen-btn');
-
-            if (ttsBtn) ttsBtn.addEventListener('click', (e) => toggleSpeech(cleanText, e.currentTarget));
             if (copyBtn) copyBtn.addEventListener('click', () => copyToClipboard(cleanText, copyBtn));
-            if (regenBtn) regenBtn.addEventListener('click', regenerateLastResponse);
         }
     }
 
@@ -365,19 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     //  UTILITIES
     // ============================================================
-    function toggleSpeech(text, button) {
-        if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            isSpeaking = false;
-            button.innerHTML = '<i class="fas fa-volume-up"></i>';
-        } else {
-            currentSpeech = new SpeechSynthesisUtterance(text);
-            currentSpeech.lang = 'id-ID';
-            currentSpeech.onend = () => { isSpeaking = false; button.innerHTML = '<i class="fas fa-volume-up"></i>'; };
-            window.speechSynthesis.speak(currentSpeech);
-            isSpeaking = true;
-            button.innerHTML = '<i class="fas fa-stop-circle"></i>';
-        }
+
+
+    function scrollToBottom() {
+        chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
     }
 
     function copyToClipboard(text, button) {
@@ -388,41 +366,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function regenerateLastResponse() {
-        const allUserBubbles = chatContainer.querySelectorAll('[style*="var(--user-bg-bubble-user)"]');
-        const lastUserBubble = allUserBubbles[allUserBubbles.length - 1];
-        if (!lastUserBubble) return;
-
-        lastUserMessage = lastUserBubble.innerText;
-
-        if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'model') {
-            chatHistory.pop();
-            chatContainer.lastElementChild.remove();
-        }
-
-        toggleInput(true);
-        showTypingIndicator();
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: lastUserMessage, history: chatHistory.slice(-20) }),
-            });
-            if (!response.ok) throw new Error('Server error');
-            const data = await response.json();
-            chatHistory.push({ role: "model", parts: [{ text: data.response }] });
-            appendMessage(data.response, 'ai');
-        } catch (error) {
-            appendMessage('Maaf, gagal membuat respons baru.', 'ai', true);
-        } finally {
-            removeTypingIndicator();
-            toggleInput(false);
-        }
-    }
-
-    function scrollToBottom() {
-        chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
-    }
-
-    startNewChat();
 });

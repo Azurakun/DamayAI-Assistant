@@ -70,6 +70,28 @@
                             <i class="fas fa-paper-plane"></i> Kirim & Analisis RAG
                         </button>
                     </form>
+                    
+                    <!-- Token Monitor Widget -->
+                    <div id="token-monitor-widget" style="margin-top:2rem; padding:1rem; background:var(--bg-card-inner); border-radius:0.75rem; border:1px solid var(--border-card); display:none;">
+                        <h4 style="margin:0 0 1rem; color:var(--text-accent); font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-chart-pie"></i> Pemantau Token</h4>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                            <span style="color:var(--text-muted); font-size:0.85rem;">Model:</span>
+                            <span id="token-model" style="color:var(--text-primary); font-weight:600; font-size:0.85rem;">-</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                            <span style="color:var(--text-muted); font-size:0.85rem;">Prompt Tokens:</span>
+                            <span id="token-prompt" style="color:#22d3ee; font-weight:600; font-size:0.85rem;">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                            <span style="color:var(--text-muted); font-size:0.85rem;">Completion Tokens:</span>
+                            <span id="token-completion" style="color:#4ade80; font-weight:600; font-size:0.85rem;">0</span>
+                        </div>
+                        <div style="height:1px; background:var(--border-card); margin:0.75rem 0;"></div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--text-muted); font-size:0.85rem; font-weight:600;">Total Tokens:</span>
+                            <span id="token-total" style="color:#c084fc; font-weight:700; font-size:0.95rem;">0</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="admin-card">
                     <div class="admin-card-title"><i class="fas fa-microchip" style="margin-right:0.5rem;color:var(--text-accent);"></i> Log Proses (Thinking Process)</div>

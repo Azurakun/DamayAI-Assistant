@@ -81,6 +81,51 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Token Monitor Global Widget -->
+            <div class="admin-card">
+                <div class="admin-card-title"><i class="fas fa-chart-pie" style="margin-right:0.5rem;color:var(--text-accent);"></i> Monitor Token Global</div>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">Akumulasi penggunaan token AI dari seluruh interaksi pengguna dan admin.</p>
+                <div style="margin-bottom:1.5rem; padding:1rem; background:rgba(34, 211, 238, 0.05); border:1px solid rgba(34, 211, 238, 0.2); border-radius:0.5rem;">
+                    <h5 style="margin:0 0 0.5rem; color:var(--text-primary); font-size:0.9rem;">Informasi Harga (per 1 Juta Token)</h5>
+                    <p style="margin:0; font-size:0.8rem; color:var(--text-muted); line-height:1.5;">
+                        Model Aktif: <strong style="color:var(--text-accent);">gemini-3.1-pro</strong><br>
+                        Input (Prompt): <strong>$2.00</strong> | Output (Completion): <strong>$12.00</strong>
+                    </p>
+                </div>
+
+                <!-- Live Money Spent Box -->
+                <div style="margin-bottom:1rem; padding:1rem 1.25rem; background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.25); border-radius:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="color:var(--text-primary); font-weight:600; font-size:0.95rem; display:block;"><i class="fas fa-wallet" style="margin-right:0.5rem; color:#10b981;"></i> Total Biaya Real-Time (USD)</span>
+                        <span style="color:var(--text-muted); font-size:0.75rem;">Estimasi biaya berdasarkan harga model gemini-3.1-pro</span>
+                    </div>
+                    <span id="global-token-cost" style="color:#10b981; font-weight:700; font-size:1.25rem;">$0.000000</span>
+                </div>
+
+                <div style="background:var(--bg-card-inner); padding:1.25rem; border-radius:0.75rem; border:1px solid var(--border-card);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                        <span style="color:var(--text-muted); font-size:0.9rem;">Total Interaksi (Requests):</span>
+                        <span id="global-token-requests" style="color:#fbbf24; font-weight:600; font-size:0.9rem;">0</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                        <span style="color:var(--text-muted); font-size:0.9rem;">Prompt Tokens (Input):</span>
+                        <span id="global-token-prompt" style="color:#22d3ee; font-weight:600; font-size:0.9rem;">0</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+                        <span style="color:var(--text-muted); font-size:0.9rem;">Completion Tokens (Output):</span>
+                        <span id="global-token-completion" style="color:#4ade80; font-weight:600; font-size:0.9rem;">0</span>
+                    </div>
+                    <div style="height:1px; background:var(--border-card); margin:1rem 0;"></div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color:var(--text-primary); font-size:1rem; font-weight:700;">Total Akumulasi Token:</span>
+                        <span id="global-token-total" style="color:#c084fc; font-weight:700; font-size:1.1rem;">0</span>
+                    </div>
+                </div>
+                <button id="refresh-token-stats-btn" class="btn btn-secondary" style="margin-top:1.5rem; width:100%;">
+                    <i class="fas fa-sync-alt"></i> Segarkan Data
+                </button>
+            </div>
         </main>
     </div>
 

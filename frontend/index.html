@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DamayAI - Asisten Cerdas SMKN 2 Indramayu</title>
-    <meta name="description" content="DamayAI adalah asisten virtual berbasis AI untuk SMKN 2 Indramayu. Tanyakan informasi seputar sekolah.">
+    <meta name="description"
+        content="DamayAI adalah asisten virtual berbasis AI untuk SMKN 2 Indramayu. Tanyakan informasi seputar sekolah.">
 
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -13,25 +15,30 @@
 
     <script>
         // Apply saved theme immediately to prevent flash of wrong theme
-        (function() {
+        (function () {
             var t = localStorage.getItem('damayai-user-theme') || 'light';
             document.documentElement.setAttribute('data-theme', t);
         })();
     </script>
 </head>
+
 <body>
 
     <div id="app-container">
 
         <header>
             <div style="display:flex;align-items:center;gap:0.75rem;">
-                <img src="favicon.png" alt="Logo" style="height:2.5rem;width:2.5rem;border-radius:9999px;border:2px solid var(--user-accent);padding:2px;">
+                <img src="favicon.png" alt="Logo"
+                    style="height:2.5rem;width:2.5rem;border-radius:9999px;border:2px solid var(--user-accent);padding:2px;">
                 <div>
-                    <h1 style="font-size:0.9rem;font-weight:700;color:var(--user-text-primary);margin:0;line-height:1.2;">Asisten AI <br class="sm-hide"> SMKN 2 Indramayu</h1>
-                    <p style="font-size:0.65rem;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:0.375rem;margin:0.125rem 0 0;">
+                    <h1
+                        style="font-size:0.9rem;font-weight:700;color:var(--user-text-primary);margin:0;line-height:1.2;">
+                        Asisten AI <br class="sm-hide"> SMKN 2 Indramayu</h1>
+                    <p
+                        style="font-size:0.65rem;font-weight:600;color:#16a34a;display:flex;align-items:center;gap:0.375rem;margin:0.125rem 0 0;">
                         <span class="online-dot">
-                          <span class="online-dot-ping"></span>
-                          <span class="online-dot-solid"></span>
+                            <span class="online-dot-ping"></span>
+                            <span class="online-dot-solid"></span>
                         </span>
                         Online
                     </p>
@@ -44,8 +51,8 @@
                 <button id="bug-report-btn" class="header-btn header-btn-bug">
                     <i class="fas fa-bug"></i><span class="btn-text">Lapor Bug</span>
                 </button>
-                <button id="new-chat-btn" class="header-btn header-btn-new">
-                    <i class="fas fa-plus-circle"></i><span class="btn-text">Baru</span>
+                <button id="dev-credits-btn" class="header-btn header-btn-new">
+                    <i class="fas fa-code"></i><span class="btn-text">Developer Info</span>
                 </button>
             </div>
         </header>
@@ -58,7 +65,8 @@
             <div class="footer-inner">
                 <form id="chat-form" class="chat-form">
                     <div style="position:relative;flex:1;">
-                        <input type="text" id="chat-input" placeholder="Tanya seputar sekolah..." autocomplete="off" required>
+                        <input type="text" id="chat-input" placeholder="Tanya seputar sekolah..." autocomplete="off"
+                            required>
                         <button type="submit" id="send-btn">
                             <i class="fas fa-arrow-up" style="font-size:0.8rem;"></i>
                         </button>
@@ -80,11 +88,13 @@
                 <form id="bug-report-form">
                     <div style="margin-bottom:1rem;">
                         <label for="bug-description" class="bug-form-label">Jelaskan masalahnya</label>
-                        <textarea id="bug-description" name="description" rows="4" class="bug-form-textarea" placeholder="Contoh: Jawaban AI terpotong saat..." required></textarea>
+                        <textarea id="bug-description" name="description" rows="4" class="bug-form-textarea"
+                            placeholder="Contoh: Jawaban AI terpotong saat..." required></textarea>
                     </div>
                     <div style="margin-bottom:1.25rem;">
                         <label for="bug-file" class="bug-form-label">Lampiran (Opsional)</label>
-                        <input type="file" id="bug-file" accept="image/*,video/*" style="width:100%;font-size:0.75rem;color:var(--user-text-muted);">
+                        <input type="file" id="bug-file" accept="image/*,video/*"
+                            style="width:100%;font-size:0.75rem;color:var(--user-text-muted);">
                     </div>
                     <div style="display:flex;justify-content:flex-end;">
                         <button type="submit" id="submit-bug-report-btn" class="bug-submit-btn">Kirim</button>
@@ -94,6 +104,71 @@
         </div>
     </div>
 
+    <!-- Modal Developer Info -->
+    <div id="dev-credits-modal" class="dev-modal-overlay" style="display:none;">
+        <div class="dev-modal-card">
+            <div class="dev-modal-header">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <i class="fas fa-code" style="color:var(--user-accent);"></i>
+                    <h2>Developer Info</h2>
+                </div>
+                <button id="close-credits-btn" class="dev-modal-close">&times;</button>
+            </div>
+            <div class="dev-modal-body">
+                <p class="dev-modal-subtitle">Tim Pengembang DamayAI Assistant</p>
+
+                <div class="dev-cards-container">
+                    <!-- Developer 1 Card -->
+                    <div class="dev-card">
+                        <div class="dev-avatar-wrapper">
+                            <img src="assets/dev1.jpeg" alt="Foto Achmad Arditio Sumartono" class="dev-avatar-img"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <i class="fas fa-user-astronaut dev-avatar-icon" style="display:none;"></i>
+                        </div>
+                        <div class="dev-details">
+                            <h3 class="dev-name">Achmad Arditio Sumartono</h3>
+                            <span class="dev-role-badge">Main Dev & Fullstack</span>
+                            <p class="dev-desc">PENS • Pengembangan Sistem Essensial & Tiered RAG</p>
+                        </div>
+                    </div>
+
+                    <!-- Developer 2 Card -->
+                    <div class="dev-card">
+                        <div class="dev-avatar-wrapper">
+                            <img src="assets/dev2.jpeg" alt="Foto Renaissance Ricarda Sugiarto Putra" class="dev-avatar-img"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <i class="fas fa-user-ninja dev-avatar-icon" style="display:none;"></i>
+                        </div>
+                        <div class="dev-details">
+                            <h3 class="dev-name">Renaissance Ricarda Sugiarto Putra</h3>
+                            <span class="dev-role-badge">Co-Dev & Researcher</span>
+                            <p class="dev-desc">SMKN 2 Indramayu • Pengembang Model AI & System Intergrator</p>
+                        </div>
+                    </div>
+
+                    <!-- Developer 3 Card -->
+                    <div class="dev-card">
+                        <div class="dev-avatar-wrapper">
+                            <img src="assets/dev3.jpeg" alt="Foto Pengembang 3" class="dev-avatar-img"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <i class="fas fa-user-gear dev-avatar-icon" style="display:none;"></i>
+                        </div>
+                        <div class="dev-details">
+                            <h3 class="dev-name">Haidar Saefullah</h3>
+                            <span class="dev-role-badge">Data Contributor</span>
+                            <p class="dev-desc">SMKN 2 Indramayu • Pengumpul Dataset & Kurasi Info</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dev-modal-footer">
+                <p><i class="fas fa-microchip" style="margin-right:0.35rem;color:var(--user-accent);"></i> DamayAI
+                    Assistant v1.0 | SMKN 2 Indramayu</p>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
+
 </html>
